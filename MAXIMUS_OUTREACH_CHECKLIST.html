@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maximus Outreach — Build Checklist</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0a0a0a;
+    color: #e5e5e5;
+    line-height: 1.6;
+    padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  header {
+    text-align: center;
+    padding: 30px 0 20px;
+    border-bottom: 1px solid #262626;
+    margin-bottom: 30px;
+  }
+  header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fafafa;
+    margin-bottom: 8px;
+  }
+  header p {
+    color: #737373;
+    font-size: 14px;
+  }
+
+  .progress-bar-container {
+    background: #1a1a1a;
+    border: 1px solid #262626;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 30px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .progress-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .progress-stats span {
+    font-size: 14px;
+    color: #a3a3a3;
+  }
+  .progress-stats .done-count {
+    font-size: 20px;
+    font-weight: 700;
+    color: #22c55e;
+  }
+  .progress-track {
+    width: 100%;
+    height: 10px;
+    background: #262626;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #22c55e);
+    border-radius: 5px;
+    transition: width 0.4s ease;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .controls button {
+    padding: 8px 16px;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    color: #e5e5e5;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  .controls button:hover {
+    background: #262626;
+    border-color: #3b82f6;
+  }
+  .controls button.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
+  }
+  .controls .export-btn {
+    margin-left: auto;
+    background: #1a3a1a;
+    border-color: #22c55e;
+    color: #22c55e;
+  }
+  .controls .export-btn:hover {
+    background: #22c55e;
+    color: #000;
+  }
+
+  .phase {
+    background: #111111;
+    border: 1px solid #262626;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .phase.all-done {
+    border-color: #166534;
+  }
+  .phase-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+    gap: 12px;
+    transition: background 0.2s;
+  }
+  .phase-header:hover {
+    background: #1a1a1a;
+  }
+  .phase-toggle {
+    color: #525252;
+    font-size: 12px;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .phase.open .phase-toggle {
+    transform: rotate(90deg);
+  }
+  .phase-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fafafa;
+    flex: 1;
+  }
+  .phase-role {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .role-backend { background: #1e3a5f; color: #60a5fa; }
+  .role-frontend { background: #3b1f5e; color: #c084fc; }
+  .role-qa { background: #5e3b1f; color: #fb923c; }
+  .phase-count {
+    font-size: 12px;
+    color: #737373;
+    flex-shrink: 0;
+    min-width: 50px;
+    text-align: right;
+  }
+  .phase-count.complete { color: #22c55e; }
+
+  .phase-body {
+    display: none;
+    padding: 0 20px 16px;
+  }
+  .phase.open .phase-body {
+    display: block;
+  }
+
+  .task {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .task:last-child { border-bottom: none; }
+
+  .task input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #404040;
+    border-radius: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .task input[type="checkbox"]:hover {
+    border-color: #3b82f6;
+  }
+  .task input[type="checkbox"]:checked {
+    background: #22c55e;
+    border-color: #22c55e;
+  }
+  .task input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #000;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .task-info { flex: 1; }
+  .task-id {
+    font-size: 12px;
+    color: #3b82f6;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+  }
+  .task-name {
+    font-size: 14px;
+    color: #d4d4d4;
+  }
+  .task.done .task-name {
+    color: #525252;
+    text-decoration: line-through;
+  }
+  .task-test {
+    font-size: 12px;
+    color: #737373;
+    margin-top: 2px;
+  }
+
+  .summary-box {
+    background: #1a1a1a;
+    border: 1px solid #262626;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-top: 30px;
+    margin-bottom: 30px;
+  }
+  .summary-box h3 {
+    color: #fafafa;
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .summary-box pre {
+    background: #0a0a0a;
+    border: 1px solid #262626;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 13px;
+    color: #a3a3a3;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .summary-box button {
+    margin-top: 10px;
+    padding: 8px 20px;
+    background: #3b82f6;
+    border: none;
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .summary-box button:hover { background: #2563eb; }
+  .copied-toast {
+    display: none;
+    color: #22c55e;
+    font-size: 13px;
+    margin-left: 10px;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .phase-header { padding: 12px 14px; flex-wrap: wrap; }
+    .phase-role { display: none; }
+    .controls { gap: 6px; }
+    .controls button { padding: 6px 12px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Maximus Outreach — Build Checklist</h1>
+  <p>Check tasks as you complete them. Progress saves automatically in your browser.</p>
+</header>
+
+<div class="progress-bar-container">
+  <div class="progress-stats">
+    <span><span class="done-count" id="doneCount">0</span> / <span id="totalCount">0</span> tasks</span>
+    <span id="progressPercent">0%</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="active" onclick="filterTasks('all')">All</button>
+  <button onclick="filterTasks('pending')">Pending</button>
+  <button onclick="filterTasks('done')">Done</button>
+  <button onclick="filterTasks('backend')" style="color:#60a5fa">Backend</button>
+  <button onclick="filterTasks('frontend')" style="color:#c084fc">Frontend</button>
+  <button onclick="filterTasks('qa')" style="color:#fb923c">QA</button>
+  <button class="export-btn" onclick="generateSummary()">📋 Copy Status for LLM</button>
+</div>
+
+<div id="phases"></div>
+
+<div class="summary-box" id="summaryBox" style="display:none">
+  <h3>📋 Paste This to LLM Before Starting</h3>
+  <pre id="summaryText"></pre>
+  <button onclick="copySummary()">Copy to Clipboard</button>
+  <span class="copied-toast" id="copiedToast">✓ Copied!</span>
+</div>
+
+<script>
+const PHASES = [
+  {
+    id: 1, title: "Project Scaffolding & Database Setup", role: "backend",
+    tasks: [
+      { id: "1.1", name: "Initialize Backend Project", test: "pip install completes without errors" },
+      { id: "1.2", name: "Configure FastAPI Application", test: "GET /health returns 200" },
+      { id: "1.3", name: "Configure Database Connection", test: "Alembic connects to PostgreSQL" },
+      { id: "1.4", name: "Create All Database Models (incl. user roles & assignments)", test: "alembic autogenerate creates correct migration" },
+      { id: "1.5", name: "Run Initial Migration", test: "All tables visible in PostgreSQL incl. user_client_assignments" },
+      { id: "1.6", name: "Create Encryption Utility", test: "Encrypt → decrypt → values match" }
+    ]
+  },
+  {
+    id: 2, title: "Authentication & Security", role: "backend",
+    tasks: [
+      { id: "2.1", name: "Create Auth Schemas (UserResponse incl. role + assigned_clients)", test: "Schema validation with valid/invalid data" },
+      { id: "2.2", name: "Create Security Module (JWT includes role)", test: "Hash/verify password, create/decode token with role" },
+      { id: "2.3", name: "Create Auth Router + require_owner dependency", test: "Register owner → login → token. Manager login → token with role=manager" },
+      { id: "2.4", name: "Auth Middleware + Role Guards", test: "No token → 401, valid token → 200, manager on owner route → 403" }
+    ]
+  },
+  {
+    id: 3, title: "User Management (Owner Only)", role: "backend",
+    tasks: [
+      { id: "3.1", name: "User CRUD Schemas & Service (get_accessible_clients)", test: "Create manager, assign clients, get_accessible_clients returns correct list" },
+      { id: "3.2", name: "User Router (owner-only CRUD + client assignment)", test: "Owner: create/list/edit/deactivate managers. Manager: 403 on all user routes" }
+    ]
+  },
+  {
+    id: 4, title: "Client Management (Owner CRUD, Manager Read Assigned)", role: "backend",
+    tasks: [
+      { id: "4.1", name: "Create Client Schemas", test: "Schema validation" },
+      { id: "4.2", name: "Client Router & Service (owner CRUD, manager sees assigned only)", test: "Owner: full CRUD. Manager: list only assigned, create/edit/delete → 403" }
+    ]
+  },
+  {
+    id: 5, title: "Lead Management & CSV Import", role: "backend",
+    tasks: [
+      { id: "5.1", name: "Create Lead Schemas", test: "Schema validation" },
+      { id: "5.2", name: "Create CSV Import Service", test: "Upload CSV, dedup works, import history tracked" },
+      { id: "5.3", name: "Lead Router (all routes check client access, bulk delete owner only)", test: "Import CSV, list, filter, search. Manager bulk delete → 403" }
+    ]
+  },
+  {
+    id: 6, title: "AI Engine (Multi-Provider Free Rotation)", role: "backend",
+    tasks: [
+      { id: "6.1", name: "AI API Key Management (with base_url)", test: "Add keys for Groq, OpenRouter, Google AI Studio — test each" },
+      { id: "6.2", name: "AI Service with Key Rotation", test: "Generate messages, rotation works when key exhausted" },
+      { id: "6.3", name: "AI Health Check Worker", test: "Health statuses updated for all providers" }
+    ]
+  },
+  {
+    id: 7, title: "Email Channel (SMTP)", role: "backend",
+    tasks: [
+      { id: "7.1", name: "SMTP Settings Management", test: "Add SMTP, send test email" },
+      { id: "7.2", name: "Email Sending Service", test: "Send email, verify tracking pixel" },
+      { id: "7.3", name: "Email Warmup Worker", test: "Start warmup, verify limit updated daily" }
+    ]
+  },
+  {
+    id: 8, title: "SMS Channel (Email-to-SMS free → Twilio/Telnyx fallback)", role: "backend",
+    tasks: [
+      { id: "8.1", name: "SMS Provider Settings + Phone Numbers per Client", test: "Save Twilio or Telnyx creds, add 2 numbers, assign 1 to client, verify masking" },
+      { id: "8.2", name: "SMS Sending Service (Email-to-SMS primary, paid fallback)", test: "Email-to-SMS path works; Twilio fallback works; Telnyx fallback works; correct from_number per client" },
+      { id: "8.3", name: "SMS Incoming Webhook (Twilio + Telnyx handlers)", test: "Simulate reply → lead matched, conversation created, campaign stopped" }
+    ]
+  },
+  {
+    id: 9, title: "WhatsApp Channel", role: "backend",
+    tasks: [
+      { id: "9.1", name: "WhatsApp Settings Management", test: "Save config, send test message" },
+      { id: "9.2", name: "WhatsApp Sending Service", test: "Send message + media" },
+      { id: "9.3", name: "WhatsApp Incoming Webhook", test: "Reply → conversation captured" }
+    ]
+  },
+  {
+    id: 10, title: "Social Media DM Queue", role: "backend",
+    tasks: [
+      { id: "10.1", name: "Social DM Queue Service", test: "Queue DMs for different platforms" },
+      { id: "10.2", name: "Social DM Queue Router", test: "List, mark sent, verify status" }
+    ]
+  },
+  {
+    id: 11, title: "Campaign Builder, Pacing & Scheduler", role: "backend",
+    tasks: [
+      { id: "11.1", name: "Create Campaign & Pacing Schemas", test: "Schema validation" },
+      { id: "11.2", name: "Create Campaign Router", test: "Create campaign with steps + pacing, enroll, start" },
+      { id: "11.3", name: "Create Pacing Service", test: "Gradual rampup activates correct # of leads per day" },
+      { id: "11.4", name: "Create Campaign Execution Service", test: "Outreach log entries created for active leads" },
+      { id: "11.5", name: "Create Scheduler & Pacing Workers", test: "Pacing + scheduler + outreach workers run correctly" }
+    ]
+  },
+  {
+    id: 12, title: "Response Handling & Review Queue", role: "backend",
+    tasks: [
+      { id: "12.1", name: "Conversation Service", test: "Incoming reply → conversation + AI draft + campaign stopped" },
+      { id: "12.2", name: "Review Queue Router", test: "Approve, edit, discard drafts" },
+      { id: "12.3", name: "Conversation Router", test: "View thread, send reply, close" }
+    ]
+  },
+  {
+    id: 13, title: "Analytics Dashboard", role: "backend",
+    tasks: [
+      { id: "13.1", name: "Analytics Service (filtered by accessible clients)", test: "Insert events, verify calculations. Manager sees only assigned client data" },
+      { id: "13.2", name: "Analytics Router", test: "All endpoints return correct data, filtered by role" }
+    ]
+  },
+  {
+    id: 14, title: "Media Library", role: "backend",
+    tasks: [
+      { id: "14.1", name: "Media Upload & Serving", test: "Upload image/video/pdf, reject .exe, serve files" }
+    ]
+  },
+  {
+    id: 15, title: "Frontend — Foundation & Layout", role: "frontend",
+    tasks: [
+      { id: "15.1", name: "Initialize Frontend Project", test: "npm run dev starts without errors" },
+      { id: "15.2", name: "Layout & Navigation (Sidebar with role-based items, Client Selector, Theme)", test: "Owner sees all nav. Manager: no Settings/Users. Client selector filters by role" },
+      { id: "15.3", name: "API Client, Auth & Role Guard", test: "Owner login → full nav. Manager login → restricted nav. Manager /settings → redirect" }
+    ]
+  },
+  {
+    id: 16, title: "Frontend — Client Management", role: "frontend",
+    tasks: [
+      { id: "16.1", name: "Clients List (Owner: all + CRUD, Manager: assigned only)", test: "Owner sees all + create btn. Manager sees assigned only, no create btn" },
+      { id: "16.2", name: "Client Create/Edit Form (Owner Only)", test: "Owner creates/edits. Manager navigates to /clients/new → redirected" },
+      { id: "16.3", name: "Client Detail Page (role-scoped access)", test: "Tabs, stats. Manager on unassigned client → 403 redirect" }
+    ]
+  },
+  {
+    id: 17, title: "Frontend — Lead Management", role: "frontend",
+    tasks: [
+      { id: "17.1", name: "Leads Table (bulk delete owner only)", test: "50+ leads, sort, filter. Owner: bulk delete. Manager: no bulk delete btn" },
+      { id: "17.2", name: "CSV Import Modal", test: "Import CSV, see mapping, results" },
+      { id: "17.3", name: "Import History", test: "Import 2 CSVs, both appear in history" }
+    ]
+  },
+  {
+    id: 18, title: "Frontend — Campaign Builder", role: "frontend",
+    tasks: [
+      { id: "18.1", name: "Campaigns List", test: "View, start/pause from list" },
+      { id: "18.2", name: "Campaign Sequence Builder + Pacing Config", test: "Create 4-step campaign with pacing, upload media, enroll, start" }
+    ]
+  },
+  {
+    id: 19, title: "Frontend — Outreach Queues & Conversations", role: "frontend",
+    tasks: [
+      { id: "19.1", name: "Social DM Queue Page (filtered by accessible clients)", test: "Copy, open, mark sent, filter, keyboard shortcuts" },
+      { id: "19.2", name: "Review Queue Page", test: "Approve, edit, discard" },
+      { id: "19.3", name: "Conversations Page", test: "Select convo, see thread, send reply, AI reply" }
+    ]
+  },
+  {
+    id: 20, title: "Frontend — Analytics Dashboard", role: "frontend",
+    tasks: [
+      { id: "20.1", name: "Analytics Dashboard (filtered by accessible clients)", test: "Data renders, date range, filters, themes, export. Manager: assigned clients only" },
+      { id: "20.2", name: "Per-Client Analytics", test: "Filtered view matches global" }
+    ]
+  },
+  {
+    id: 21, title: "Frontend — Settings & User Management (Owner Only)", role: "frontend",
+    tasks: [
+      { id: "21.1", name: "SMTP Settings Page (Owner Only)", test: "Add, test, see warmup status. Manager → redirected" },
+      { id: "21.2", name: "AI Models Page (Owner Only, multi-provider, base_url)", test: "Add keys, test, rotation priorities, health check" },
+      { id: "21.3", name: "SMS Settings Page — provider choice (Twilio/Telnyx) + phone numbers per client + WhatsApp Settings (Owner Only)", test: "Switch provider, save creds, add numbers, assign to client, save WhatsApp config, test each" },
+      { id: "21.4", name: "User Management Page (Owner Only)", test: "Create manager, assign clients, edit, deactivate. Manager → redirected" }
+    ]
+  },
+  {
+    id: 22, title: "Frontend — Accessibility & Polish", role: "frontend",
+    tasks: [
+      { id: "22.1", name: "Accessibility Audit (WCAG 2.1 AA)", test: "Keyboard nav, axe audit → 0 critical" },
+      { id: "22.2", name: "Responsive Design", test: "Test 375px, 768px, 1920px" },
+      { id: "22.3", name: "Loading States & Error Handling", test: "Skeletons, error boundary, empty states, offline" }
+    ]
+  },
+  {
+    id: 23, title: "QA Testing", role: "qa",
+    tasks: [
+      { id: "23.1", name: "Backend Unit Tests (80%+ coverage)", test: "pytest --cov all pass" },
+      { id: "23.2", name: "Backend Integration Tests (incl. role-based access)", test: "Full workflows + manager can't access unassigned clients/settings/bulk delete" },
+      { id: "23.3", name: "Frontend E2E Tests — Owner + Manager flows", test: "Owner full flow. Manager restricted flow. Role enforcement tested" },
+      { id: "23.4", name: "Security Audit", test: "SQLi blocked, .exe rejected, brute force limited, role bypass blocked" }
+    ]
+  },
+  {
+    id: 24, title: "Deployment on Windows VPS", role: "backend",
+    tasks: [
+      { id: "24.1", name: "Install Prerequisites", test: "All version commands respond" },
+      { id: "24.2", name: "Deploy Backend (NSSM services)", test: "curl localhost:8000/health → ok" },
+      { id: "24.3", name: "Deploy Frontend", test: "curl localhost:3000 → HTML" },
+      { id: "24.4", name: "Configure Caddy (HTTPS)", test: "https://domain loads, API works" },
+      { id: "24.5", name: "Post-Deployment Checklist (incl. create managers & test access)", test: "All services, configs, owner + manager login tested" }
+    ]
+  }
+];
+
+const STORAGE_KEY = 'maximus_outreach_checklist';
+
+function loadState() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  } catch { return {}; }
+}
+
+function saveState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+let state = loadState();
+let currentFilter = 'all';
+
+function render() {
+  const container = document.getElementById('phases');
+  container.innerHTML = '';
+  let totalTasks = 0;
+  let doneTasks = 0;
+
+  PHASES.forEach(phase => {
+    const phaseEl = document.createElement('div');
+    phaseEl.className = 'phase';
+    if (state[`phase_${phase.id}_open`]) phaseEl.classList.add('open');
+
+    const phaseDone = phase.tasks.filter(t => state[t.id]).length;
+    const phaseTotal = phase.tasks.length;
+    totalTasks += phaseTotal;
+    doneTasks += phaseDone;
+
+    if (phaseDone === phaseTotal) phaseEl.classList.add('all-done');
+
+    // Filter visibility
+    if (currentFilter === 'backend' && phase.role !== 'backend') { phaseEl.style.display = 'none'; }
+    if (currentFilter === 'frontend' && phase.role !== 'frontend') { phaseEl.style.display = 'none'; }
+    if (currentFilter === 'qa' && phase.role !== 'qa') { phaseEl.style.display = 'none'; }
+    if (currentFilter === 'done' && phaseDone === 0) { phaseEl.style.display = 'none'; }
+    if (currentFilter === 'pending' && phaseDone === phaseTotal) { phaseEl.style.display = 'none'; }
+
+    const roleClass = `role-${phase.role}`;
+    const roleLabel = phase.role === 'backend' ? 'Backend' : phase.role === 'frontend' ? 'Frontend' : 'QA';
+
+    phaseEl.innerHTML = `
+      <div class="phase-header" onclick="togglePhase(${phase.id})">
+        <span class="phase-toggle">▶</span>
+        <span class="phase-title">Phase ${phase.id}: ${phase.title}</span>
+        <span class="phase-role ${roleClass}">${roleLabel}</span>
+        <span class="phase-count ${phaseDone === phaseTotal ? 'complete' : ''}">${phaseDone}/${phaseTotal}</span>
+      </div>
+      <div class="phase-body">
+        ${phase.tasks.map(task => {
+          const checked = state[task.id] ? 'checked' : '';
+          const doneClass = state[task.id] ? 'done' : '';
+          let visible = true;
+          if (currentFilter === 'done' && !state[task.id]) visible = false;
+          if (currentFilter === 'pending' && state[task.id]) visible = false;
+          return `
+            <div class="task ${doneClass}" ${!visible ? 'style="display:none"' : ''}>
+              <input type="checkbox" ${checked} onchange="toggleTask('${task.id}')">
+              <div class="task-info">
+                <span class="task-id">${task.id}</span>
+                <span class="task-name">${task.name}</span>
+                <div class="task-test">Test: ${task.test}</div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    container.appendChild(phaseEl);
+  });
+
+  document.getElementById('doneCount').textContent = doneTasks;
+  document.getElementById('totalCount').textContent = totalTasks;
+  const pct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+  document.getElementById('progressPercent').textContent = pct + '%';
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+function togglePhase(phaseId) {
+  state[`phase_${phaseId}_open`] = !state[`phase_${phaseId}_open`];
+  saveState(state);
+  render();
+}
+
+function toggleTask(taskId) {
+  state[taskId] = !state[taskId];
+  saveState(state);
+  render();
+}
+
+function filterTasks(filter) {
+  currentFilter = filter;
+  document.querySelectorAll('.controls button:not(.export-btn)').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  render();
+}
+
+function generateSummary() {
+  let lines = ['## Maximus Outreach — Build Status\n'];
+  let totalDone = 0, totalAll = 0;
+
+  PHASES.forEach(phase => {
+    const phaseDone = phase.tasks.filter(t => state[t.id]).length;
+    const phaseTotal = phase.tasks.length;
+    totalDone += phaseDone;
+    totalAll += phaseTotal;
+    const status = phaseDone === phaseTotal ? '✅' : phaseDone > 0 ? '🔶' : '⬜';
+
+    lines.push(`${status} **Phase ${phase.id}: ${phase.title}** (${phaseDone}/${phaseTotal})`);
+    phase.tasks.forEach(task => {
+      const check = state[task.id] ? '[x]' : '[ ]';
+      lines.push(`  - ${check} ${task.id}: ${task.name}`);
+    });
+    lines.push('');
+  });
+
+  lines.unshift(`**Progress: ${totalDone}/${totalAll} tasks (${Math.round((totalDone/totalAll)*100)}%)**\n`);
+  lines.push('---');
+  lines.push('Resume from the first unchecked task. All checked tasks are complete and tested.');
+
+  const text = lines.join('\n');
+  document.getElementById('summaryText').textContent = text;
+  document.getElementById('summaryBox').style.display = 'block';
+  document.getElementById('summaryBox').scrollIntoView({ behavior: 'smooth' });
+}
+
+function copySummary() {
+  const text = document.getElementById('summaryText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const toast = document.getElementById('copiedToast');
+    toast.style.display = 'inline';
+    setTimeout(() => toast.style.display = 'none', 2000);
+  });
+}
+
+render();
+</script>
+</body>
+</html>
