@@ -1782,3 +1782,4 @@ Available in templates and AI prompts:
 13. **AI model names are free-text.** Do not hardcode a list. User types any model their provider supports.
 14. **Role-based access is mandatory.** Every API endpoint that touches client data must check: is user owner OR assigned to this client? Settings/user management = owner only. Never expose other clients' data to managers.
 15. **Client selector dropdown** in the header/nav: Owner sees all clients. Manager sees only assigned. This is how users switch context.
+16. **VPS deployment workflow:** run deployment in a controlled, step-by-step sequence (verify current server tools first, then execute one command at a time, validate output before moving to the next step).
