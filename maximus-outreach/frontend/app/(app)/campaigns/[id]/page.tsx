@@ -386,7 +386,7 @@ function PacingTab({
         onChange={handleChange}
         totalLeads={campaign.total_enrolled}
         totalActivated={pacing?.total_activated ?? campaign.total_activated}
-        disabled={campaign.status !== "draft"}
+        disabled={campaign.status === "completed" || campaign.status === "archived"}
       />
       {dirty && (
         <div className="flex justify-end">
