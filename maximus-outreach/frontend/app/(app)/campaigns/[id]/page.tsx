@@ -130,7 +130,9 @@ const STATUS_ICON: Record<string, React.ElementType> = {
 
 function fmt(iso: string | null) {
   if (!iso) return "—";
-  const d = new Date(iso);
+  // Backend returns UTC timestamps without Z — append it so JS parses as UTC and displays in local time
+  const s = iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z";
+  const d = new Date(s);
   return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 

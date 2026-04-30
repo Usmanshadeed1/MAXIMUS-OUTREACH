@@ -1,7 +1,14 @@
 """Celery application configuration."""
+import asyncio
+import sys
+
 from celery import Celery
 
 from app.config import settings
+
+# asyncpg requires SelectorEventLoop on Windows (ProactorEventLoop is incompatible)
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 celery_app = Celery(
     "maximus_outreach",
