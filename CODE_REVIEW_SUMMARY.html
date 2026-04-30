@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Review Summary - Lead Outreach Scheduler</title>
+    <style>
+        body {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            line-height: 1.8;
+        }
+
+        h1 {
+            color: #4db8ff;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 1.1em;
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            color: #66cc99;
+            font-size: 1.8em;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #66cc99;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            color: #ffd93d;
+            font-size: 1.3em;
+            margin-top: 25px;
+        }
+
+        .section {
+            background-color: #2d2d2d;
+            padding: 25px;
+            margin: 20px 0;
+            border-left: 5px solid #4db8ff;
+            border-radius: 5px;
+        }
+
+        .warning {
+            background-color: #3a2d2d;
+            border-left-color: #ff6b6b;
+        }
+
+        .success {
+            background-color: #2d3a2d;
+            border-left-color: #66cc99;
+        }
+
+        .info {
+            background-color: #2d3a3a;
+            border-left-color: #4db8ff;
+        }
+
+        code {
+            background-color: #1e1e1e;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #66cc99;
+        }
+
+        pre {
+            background-color: #1e1e1e;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 0.9em;
+            border-left: 3px solid #4db8ff;
+        }
+
+        ul, ol {
+            margin: 10px 0;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        .option-box {
+            background-color: #252525;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #ffd93d;
+            border-radius: 3px;
+        }
+
+        .option-title {
+            color: #ffd93d;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .option-pros {
+            color: #66cc99;
+            margin: 10px 0;
+        }
+
+        .option-cons {
+            color: #ff6b6b;
+            margin: 10px 0;
+        }
+
+        .critical {
+            background-color: #3a2d2d;
+            border: 2px solid #ff6b6b;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .critical-title {
+            color: #ff6b6b;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        table td, table th {
+            border: 1px solid #555;
+            padding: 12px;
+            text-align: left;
+        }
+
+        table th {
+            background-color: #3a3a3a;
+            color: #4db8ff;
+            font-weight: bold;
+        }
+
+        table tr:nth-child(even) {
+            background-color: #252525;
+        }
+
+        .file-path {
+            color: #4db8ff;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .checkmark {
+            color: #66cc99;
+        }
+
+        .xmark {
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <h1>📋 Code Review Summary</h1>
+    <p class="subtitle">Detailed analysis of the Maximus Outreach system before building the CSV scheduler</p>
+
+    <!-- OVERVIEW -->
+    <div class="section success">
+        <h2>✅ What I Reviewed</h2>
+        <p>I read all critical files in the FastAPI + Celery backend:</p>
+        <ul>
+            <li><span class="file-path">app/services/email_service.py</span> — Email sending via SMTP</li>
+            <li><span class="file-path">app/services/whatsapp_service.py</span> — WhatsApp via Meta Cloud API</li>
+            <li><span class="file-path">app/services/social_dm_service.py</span> — Social DM queue management</li>
+            <li><span class="file-path">app/workers/celery_app.py</span> — Celery config and Beat schedule</li>
+            <li><span class="file-path">app/workers/outreach_worker.py</span> — Message dispatch worker</li>
+            <li><span class="file-path">app/workers/scheduler_worker.py</span> — Campaign scheduler</li>
+            <li><span class="file-path">app/services/csv_import_service.py</span> — CSV import logic</li>
+            <li><span class="file-path">app/models/lead.py</span> — Lead and import models</li>
+            <li><span class="file-path">app/models/outreach.py</span> — Outreach tracking models</li>
+            <li><span class="file-path">app/services/campaign_service.py</span> — Campaign execution engine</li>
+        </ul>
+    </div>
+
+    <!-- CRITICAL FINDING -->
+    <div class="critical">
+        <div class="critical-title">⚠️ CRITICAL ARCHITECTURAL FINDING</div>
+        <p><strong>There is a fundamental mismatch between your specification and the existing system architecture.</strong></p>
+        <p><strong>Your Spec Says:</strong> Read CSV → Apply rules → Write to CSV (standalone, no database)</p>
+        <p><strong>Existing System Is:</strong> Database-driven, multi-tenant, all operations require AsyncSession</p>
+    </div>
+
+    <!-- THE PROBLEM -->
+    <h2>The Core Problem</h2>
+
+    <div class="section warning">
+        <h3>Email Sending Requires Database</h3>
+        <pre>async def send_email(
+    to: str,
+    subject: str,
+    body_html: str,
+    db: AsyncSession,  # ← REQUIRED!
+    ...
+) -> dict:
+    limit = _effective_limit(smtp)  # fetches from db
+    if smtp.sent_today >= limit:
+        return {"error": "Daily limit reached"}
+    # ... send ...
+    await _increment_sent_today(smtp, db)  # updates db counter</pre>
+        <p><strong>Problem:</strong> Cannot send email without checking daily limits from database</p>
+    </div>
+
+    <div class="section warning">
+        <h3>WhatsApp Sending Requires Database + Client ID</h3>
+        <pre>async def send_whatsapp(
+    to: str,
+    body: str,
+    client_id: uuid.UUID,  # ← REQUIRED! (multi-tenant)
+    db: AsyncSession,      # ← REQUIRED!
+    ...
+) -> dict:
+    settings = await get_settings(db)  # fetch credentials
+    phone_number = await get_number_for_client(client_id, db)
+    # ... send via Meta API ...
+    phone_number.sent_today += 1  # update db</pre>
+        <p><strong>Problems:</strong></p>
+        <ul>
+            <li>Requires <code>client_id</code> to route to correct WhatsApp phone number</li>
+            <li>Requires database to fetch encrypted WhatsApp credentials</li>
+            <li>Requires database to track daily limits per phone number</li>
+        </ul>
+    </div>
+
+    <!-- THREE OPTIONS -->
+    <h2>Three Implementation Paths</h2>
+
+    <div class="option-box">
+        <div class="option-title">Option A: CSV-Only (Matches Your Spec Literally)</div>
+        <p>Read/write CSV directly with no database involvement.</p>
+        <div class="option-pros"><strong>✓ Pros:</strong>
+            <ul>
+                <li>Matches your specification exactly</li>
+                <li>Simplest to understand and debug</li>
+                <li>Completely standalone, no multi-tenant complexity</li>
+                <li>Can run without PostgreSQL/Redis if needed</li>
+            </ul>
+        </div>
+        <div class="option-cons"><strong>✗ Cons:</strong>
+            <ul>
+                <li><strong>Cannot reuse existing send_email() or send_whatsapp() functions</strong></li>
+                <li>Must create new lightweight sending code OR refactor existing functions</li>
+                <li>No daily limit tracking (would need CSV headers or separate config)</li>
+                <li>WhatsApp sends without credentials validation (could fail at runtime)</li>
+                <li>Email sends without SMTP account selection (which account to use?)</li>
+                <li>Isolated from multi-tenant system — can't scale to multiple clients</li>
+            </ul>
+        </div>
+        <p><strong>Effort:</strong> Medium (need to write new send code)</p>
+        <p><strong>Risk:</strong> High (untested send paths, no reuse of proven code)</p>
+    </div>
+
+    <div class="option-box">
+        <div class="option-title">Option B: Light Database Integration (RECOMMENDED)</div>
+        <p>Leads live in database, but use lightweight tracking (not the complex Campaign system).</p>
+        <div class="option-pros"><strong>✓ Pros:</strong>
+            <ul>
+                <li>Reuses proven email_service and whatsapp_service code</li>
+                <li>Reuses existing credential management and daily limit logic</li>
+                <li>Can still import from CSV (existing csv_import_service)</li>
+                <li>Aligns with multi-tenant architecture (ready to scale)</li>
+                <li>Cleaner separation of concerns</li>
+                <li>Can generate reports from database later</li>
+            </ul>
+        </div>
+        <div class="option-cons"><strong>✗ Cons:</strong>
+            <ul>
+                <li>Requires learning database model structure</li>
+                <li>Need to set up SMTP account and WhatsApp credentials in database</li>
+                <li>Need to create a Client record (or use existing one)</li>
+                <li>Slightly more code than Option C, but much less</li>
+            </ul>
+        </div>
+        <p><strong>Effort:</strong> Low-Medium (use existing services, add tracking table)</p>
+        <p><strong>Risk:</strong> Low (reuses tested code)</p>
+    </div>
+
+    <div class="option-box">
+        <div class="option-title">Option C: Full Campaign System</div>
+        <p>Import CSV → create Campaign with 4 Steps → use existing campaign execution.</p>
+        <div class="option-pros"><strong>✓ Pros:</strong>
+            <ul>
+                <li>Zero new code needed (mostly configuration)</li>
+                <li>Reuses all existing monitoring, retry logic, and reporting</li>
+                <li>Most robust and feature-complete</li>
+                <li>Can manage campaigns from UI</li>
+            </ul>
+        </div>
+        <div class="option-cons"><strong>✗ Cons:</strong>
+            <ul>
+                <li>Overkill for a simple CSV-based scheduler</li>
+                <li>Adds unnecessary complexity (pacing, enrollments, etc.)</li>
+                <li>Requires understanding campaign/enrollment model</li>
+            </ul>
+        </div>
+        <p><strong>Effort:</strong> Very Low (mostly API calls)</p>
+        <p><strong>Risk:</strong> Very Low (proven system)</p>
+    </div>
+
+    <!-- WHAT WORKS -->
+    <h2>✅ What's Already Working</h2>
+
+    <div class="section success">
+        <h3>Email Sending</h3>
+        <table>
+            <tr>
+                <th>Feature</th>
+                <th>Status</th>
+                <th>Notes</th>
+            </tr>
+            <tr>
+                <td>SMTP configuration</td>
+                <td><span class="checkmark">✓</span></td>
+                <td>Multiple SMTP accounts supported, warmup available</td>
+            </tr>
+            <tr>
+                <td>Daily send limits</td>
+                <td><span class="checkmark">✓</span></td>
+                <td>Tracked per SMTP account in database</td>
+            </tr>
+            <tr>
+                <td>Tracking pixel injection</td>
+                <td><span class="checkmark">✓</span></td>
+                <td>Auto-injected before send</td>
+            </tr>
+            <tr>
+                <td>Link rewriting for click tracking</td>
+                <td><span class="checkmark">✓</span></td>
+                <td>Auto-rewritten in HTML</td>
+            </tr>
+            <tr>
+                <td>Attachments</td>
+                <td><span class="checkmark">✓</span></td>
+                <td>Supported</td>
+            </tr>
+            <tr>
+                <td>Plain text fallback</td>
+                <td><span class="checkmark">✓</span></td>
+                <td>Multipart MIME</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section success">
+        <h3>WhatsApp Sending</h3>
+        <table>
+            <tr>
+                <th>Feature</th>
+                <th>Status</th>
+                <th>Notes</th>
+            </tr>
+            <tr>
+                <td>Meta Cloud API integration</td>
+                <td><span class="checkmark">✓</span></td>
+                <td>Full v19.0 support</td>
+            </tr>
+            <tr>
+                <td>Freeform text messages</td>
+                <td><span class="checkmark">✓</span></td>
+                <td>Only in 24h reply window</td>
+            </tr>
+            <tr>
+                <td>Approved templates</td>
+                <td><span class="checkmark">✓</span></td>
+                <td>Required for first contact</td>
+            </tr>
+            <tr>
+                <td>Media (image/video/document)</td>
+                <td><span class="checkmark">✓</span></td>
+                <td>All types supported</td>
+            </tr>
+            <tr>
+                <td>Multiple phone numbers per client</td>
+                <td><span class="checkmark">✓</span></td>
+                <td>Pool-based selection</td>
+            </tr>
+            <tr>
+                <td>Daily limits per number</td>
+                <td><span class="checkmark">✓</span></td>
+                <td>Tracked in database</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section success">
+        <h3>Facebook & Instagram</h3>
+        <table>
+            <tr>
+                <th>Feature</th>
+                <th>Status</th>
+                <th>Notes</th>
+            </tr>
+            <tr>
+                <td>Automation API</td>
+                <td><span class="xmark">✗</span></td>
+                <td>NOT IMPLEMENTED — No automated sending</td>
+            </tr>
+            <tr>
+                <td>Manual queue system</td>
+                <td><span class="checkmark">✓</span></td>
+                <td>Can queue for manual/browser extension sending</td>
+            </tr>
+            <tr>
+                <td>Platform detection</td>
+                <td><span class="checkmark">✓</span></td>
+                <td>Auto-detects from profile URL</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- CSV STRUCTURE -->
+    <h2>CSV File Analysis</h2>
+
+    <div class="section info">
+        <h3>Location</h3>
+        <p><span class="file-path">Sample data csvs/kitchen_cabinet_leads_enriched.csv</span></p>
+
+        <h3>Current Columns (19)</h3>
+        <table>
+            <tr>
+                <th>Column</th>
+                <th>Sample Value</th>
+                <th>Use</th>
+            </tr>
+            <tr>
+                <td>keyword</td>
+                <td>home builders</td>
+                <td>Search term (skipped on import)</td>
+            </tr>
+            <tr>
+                <td>location</td>
+                <td>08202</td>
+                <td>Zip code (skipped on import)</td>
+            </tr>
+            <tr>
+                <td><strong>title</strong></td>
+                <td>Thomas Welsh Builders</td>
+                <td><strong>→ Maps to business_name</strong></td>
+            </tr>
+            <tr>
+                <td>address</td>
+                <td>Avalon, NJ</td>
+                <td>Lead address</td>
+            </tr>
+            <tr>
+                <td><strong>phone</strong></td>
+                <td>(609) 368-0301</td>
+                <td><strong>For WhatsApp</strong></td>
+            </tr>
+            <tr>
+                <td>website</td>
+                <td>–</td>
+                <td>Business website</td>
+            </tr>
+            <tr>
+                <td>rating</td>
+                <td>5.0</td>
+                <td>Google rating</td>
+            </tr>
+            <tr>
+                <td>reviews</td>
+                <td>7</td>
+                <td>Review count</td>
+            </tr>
+            <tr>
+                <td><strong>email</strong></td>
+                <td>–</td>
+                <td><strong>For Email</strong></td>
+            </tr>
+            <tr>
+                <td><strong>facebook</strong></td>
+                <td>–</td>
+                <td><strong>For Facebook DM</strong></td>
+            </tr>
+            <tr>
+                <td><strong>instagram</strong></td>
+                <td>–</td>
+                <td><strong>For Instagram DM</strong></td>
+            </tr>
+        </table>
+
+        <h3>Columns to Add (per your spec)</h3>
+        <ul>
+            <li><code>email_sent</code> — Date when email was sent (YYYY-MM-DD)</li>
+            <li><code>facebook_sent</code> — Date when Facebook DM was sent</li>
+            <li><code>instagram_sent</code> — Date when Instagram DM was sent</li>
+            <li><code>whatsapp_sent</code> — Date when WhatsApp was sent</li>
+            <li><code>responded</code> — YES if lead replied (human-set)</li>
+            <li><code>restart_needed</code> — YES if all 4 platforms exhausted (scheduler-set)</li>
+        </ul>
+
+        <h3>Data Sample (4 rows)</h3>
+        <p>All have phone numbers. Most have empty email/social (this is typical for Google Maps scraper data).</p>
+        <p>This means: Most leads will only be reachable via WhatsApp initially.</p>
+    </div>
+
+    <!-- CELERY INFO -->
+    <h2>Celery Setup</h2>
+
+    <div class="section info">
+        <h3>Current Beat Schedule</h3>
+        <table>
+            <tr>
+                <th>Task</th>
+                <th>Interval</th>
+                <th>Purpose</th>
+            </tr>
+            <tr>
+                <td>run_email_warmup</td>
+                <td>Daily (86400s)</td>
+                <td>Reset sent_today counters</td>
+            </tr>
+            <tr>
+                <td>run_pacing</td>
+                <td>Every 15 min</td>
+                <td>Activate enrollments per pacing config</td>
+            </tr>
+            <tr>
+                <td>run_scheduler</td>
+                <td>Every 5 min</td>
+                <td>Dispatch due campaign steps</td>
+            </tr>
+            <tr>
+                <td>process_outreach_queue</td>
+                <td>Every 5 min</td>
+                <td>Send queued messages</td>
+            </tr>
+        </table>
+
+        <p><strong>Key Insight:</strong> Your new task will need to be added to this schedule. Recommendation: Run daily early morning.</p>
+    </div>
+
+    <!-- WHAT I NEED FROM YOU -->
+    <h2>🤔 What I Need From You to Proceed</h2>
+
+    <div class="critical">
+        <div class="critical-title">CRITICAL DECISION: Which Path?</div>
+        <p><strong>Choose one:</strong></p>
+        <ul>
+            <li><strong>Option A:</strong> Standalone CSV-only (matches your spec, but need to handle credentials somehow)</li>
+            <li><strong>Option B:</strong> Light database integration (RECOMMENDED — best balance of simplicity + reusability)</li>
+            <li><strong>Option C:</strong> Full campaign system (overkill but most robust)</li>
+        </ul>
+    </div>
+
+    <p>I've updated your <span class="file-path">ANSWERS.html</span> file with revised questions that account for these findings. Please fill it out so I can proceed with confidence.</p>
+
+    <div class="section success">
+        <h3>Next Steps</h3>
+        <ol>
+            <li>Review this summary</li>
+            <li>Open the updated <span class="file-path">ANSWERS.html</span> file</li>
+            <li>Fill in your answers (especially the architecture choice in Q1)</li>
+            <li>Submit and copy your answers</li>
+            <li>Share your answers back with me</li>
+            <li>I'll implement based on your choice</li>
+        </ol>
+    </div>
+
+</body>
+</html>

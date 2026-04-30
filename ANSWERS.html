@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Outreach Scheduler - Answer Form</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            line-height: 1.8;
+        }
+
+        h1 {
+            color: #4db8ff;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 1.1em;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .answer-form {
+            background-color: #2d2d2d;
+            padding: 30px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 5px solid #4db8ff;
+        }
+
+        .question-title {
+            color: #ffd93d;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .question-number {
+            background-color: #4db8ff;
+            color: #1e1e1e;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .question-description {
+            color: #aaa;
+            font-size: 0.95em;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: 2px solid #4db8ff;
+            border-radius: 5px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 1em;
+            resize: vertical;
+            min-height: 100px;
+            line-height: 1.5;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #66cc99;
+            box-shadow: 0 0 10px rgba(102, 204, 153, 0.3);
+        }
+
+        .radio-group {
+            margin: 15px 0;
+        }
+
+        .radio-option {
+            margin: 12px 0;
+            padding: 12px;
+            background-color: #1e1e1e;
+            border: 2px solid #555;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .radio-option:hover {
+            border-color: #4db8ff;
+            background-color: #252525;
+        }
+
+        .radio-option input[type="radio"] {
+            margin-right: 10px;
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        .radio-label {
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .option-text {
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+
+        .option-description {
+            color: #aaa;
+            font-size: 0.9em;
+            margin-left: 28px;
+            margin-top: 5px;
+        }
+
+        .help-text {
+            background-color: #1e1e1e;
+            padding: 12px;
+            margin-top: 10px;
+            border-left: 3px solid #66cc99;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #ccc;
+        }
+
+        .info-box {
+            background-color: #2d3a2d;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 3px solid #66cc99;
+            border-radius: 3px;
+            font-size: 0.95em;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 40px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-submit {
+            background-color: #66cc99;
+            color: #1e1e1e;
+        }
+
+        .btn-submit:hover {
+            background-color: #7fd9aa;
+            transform: scale(1.05);
+        }
+
+        .btn-clear {
+            background-color: #666;
+            color: #e0e0e0;
+        }
+
+        .btn-clear:hover {
+            background-color: #777;
+        }
+
+        .progress {
+            background-color: #2d2d2d;
+            padding: 20px;
+            margin-bottom: 40px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #555;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #4db8ff;
+            transition: width 0.3s;
+        }
+
+        .required {
+            color: #ff6b6b;
+        }
+
+        .completion-message {
+            display: none;
+            background-color: #2d4a2d;
+            padding: 20px;
+            border-radius: 5px;
+            border-left: 5px solid #66cc99;
+            color: #66cc99;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        .header-info {
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+            border-left: 5px solid #ffd93d;
+        }
+
+        .header-info strong {
+            color: #ffd93d;
+        }
+
+        .feedback-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px dashed #555;
+        }
+
+        .feedback-label {
+            color: #66cc99;
+            font-size: 0.95em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .feedback-icon {
+            margin-right: 8px;
+            font-size: 1.1em;
+        }
+
+        textarea.feedback {
+            width: 100%;
+            padding: 12px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: 2px solid #66cc99;
+            border-radius: 5px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 0.95em;
+            resize: vertical;
+            min-height: 70px;
+            line-height: 1.5;
+        }
+
+        textarea.feedback:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(102, 204, 153, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1>✏️ Lead Outreach Scheduler - Answer Form</h1>
+    <p class="subtitle">Provide your answers below. All required fields are marked with <span class="required">*</span></p>
+
+    <div class="header-info">
+        <strong>📝 Instructions:</strong> Fill in your answers for each question. You can use any format that makes sense for each question (select options or type details). Once complete, copy your answers and share them with me. I'll have everything I need to build the scheduler.
+    </div>
+
+    <form id="answerForm">
+
+        <!-- Q1 -->
+        <div class="answer-form">
+            <div class="question-title">
+                <div class="question-number">1</div>
+                <div>Architecture — CSV-Only vs. Database Integration? <span class="required">*</span></div>
+            </div>
+            <div class="question-description">Should the scheduler work directly on the CSV file or integrate with the existing database?</div>
+
+            <div class="radio-group">
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q1" value="A) CSV-Only" required>
+                        <div>
+                            <div class="option-text">A) CSV-Only (Standalone)</div>
+                            <div class="option-description">Read/write CSV directly, no database involvement. Matches spec exactly.</div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q1" value="B) Database-Integrated" required>
+                        <div>
+                            <div class="option-text">B) Database-Integrated</div>
+                            <div class="option-description">Use existing Campaign/Enrollment system, more robust but more complex.</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="help-text">
+                <strong>💡 Recommendation:</strong> Option A (CSV-Only) is simpler and matches your original spec exactly.
+            </div>
+
+            <div class="feedback-section">
+                <div class="feedback-label">
+                    <span class="feedback-icon">💬</span>
+                    Additional feedback or details for Q1:
+                </div>
+                <textarea name="q1_feedback" class="feedback" placeholder="Don't like these options? Want to explain your choice? Have special requirements? Let me know here..."></textarea>
+            </div>
+        </div>
+
+        <!-- Q2 -->
+        <div class="answer-form">
+            <div class="question-title">
+                <div class="question-number">2</div>
+                <div>Facebook & Instagram — How to Handle? <span class="required">*</span></div>
+            </div>
+            <div class="question-description">No automation API exists for Facebook/Instagram. How should the scheduler handle these platforms?</div>
+
+            <div class="radio-group">
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q2" value="A) Queue for Manual Sending" required>
+                        <div>
+                            <div class="option-text">A) Queue for Manual Sending</div>
+                            <div class="option-description">Add to social DM queue, a person marks as sent manually. Semi-automated.</div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q2" value="B) Skip Entirely" required>
+                        <div>
+                            <div class="option-text">B) Skip Entirely</div>
+                            <div class="option-description">Only use Email and WhatsApp, never contact via Facebook/Instagram.</div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q2" value="C) Mark as Attempted Without Sending" required>
+                        <div>
+                            <div class="option-text">C) Mark as Attempted Without Sending</div>
+                            <div class="option-description">Pretend we sent (write date, but no actual message). Not recommended.</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="help-text">
+                <strong>💡 Recommendation:</strong> Option A (queue for manual) is most realistic.
+            </div>
+
+            <div class="feedback-section">
+                <div class="feedback-label">
+                    <span class="feedback-icon">💬</span>
+                    Additional feedback or details for Q2:
+                </div>
+                <textarea name="q2_feedback" class="feedback" placeholder="Do you have API access to Facebook/Instagram? Different preference? Let me know..."></textarea>
+            </div>
+        </div>
+
+        <!-- Q3 -->
+        <div class="answer-form">
+            <div class="question-title">
+                <div class="question-number">3</div>
+                <div>Message Content — What Should Be Sent? <span class="required">*</span></div>
+            </div>
+            <div class="question-description">What message template(s) should the scheduler send? Include any placeholders like {business_name}, {phone}, {email}, {website}.</div>
+
+            <div class="radio-group">
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q3_type" value="single" required>
+                        <div class="option-text">Single message for all platforms</div>
+                    </label>
+                </div>
+
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q3_type" value="per_platform" required>
+                        <div class="option-text">Different message per platform (Email, WhatsApp, Facebook, Instagram)</div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>📝 Provide your message template(s) below:</strong>
+            </div>
+
+            <textarea name="q3_message" placeholder="Example:
+Email Subject: Special Offer for Your Kitchen Cabinet Business
+Email Body: Hi {business_name}, we have a special offer for kitchen cabinet owners. Visit {website} to learn more.
+
+WhatsApp: Hi {business_name}! Check out our special kitchen cabinet offer 👉 {website}
+
+Facebook/Instagram: Hi {business_name}, special offer just for you! {website}"  required></textarea>
+
+            <div class="help-text">
+                Available placeholders: {business_name}, {phone}, {email}, {address}, {website}, {rating}
+            </div>
+
+            <div class="feedback-section">
+                <div class="feedback-label">
+                    <span class="feedback-icon">💬</span>
+                    Additional feedback or details for Q3:
+                </div>
+                <textarea name="q3_feedback" class="feedback" placeholder="Want to add tone/style notes? Need variations? Have specific call-to-action? Let me know..."></textarea>
+            </div>
+        </div>
+
+        <!-- Q4 -->
+        <div class="answer-form">
+            <div class="question-title">
+                <div class="question-number">4</div>
+                <div>WhatsApp Approved Template <span class="required">*</span></div>
+            </div>
+            <div class="question-description">WhatsApp requires approved templates for first contact. Do you have one set up?</div>
+
+            <div class="radio-group">
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q4_has_template" value="yes" required>
+                        <div class="option-text">Yes, I have an approved template</div>
+                    </label>
+                </div>
+
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q4_has_template" value="no" required>
+                        <div class="option-text">No, I don't have a template yet</div>
+                    </label>
+                </div>
+            </div>
+
+            <textarea name="q4_template_details" placeholder="If YES: Provide the template name and any variable placeholders.
+Example: Template name = 'kitchen_cabinet_offer_en', Variables = {customer_name}, {offer_link}
+
+If NO: Let me know and I'll help you set one up or use freeform text (if allowed)."></textarea>
+
+            <div class="help-text">
+                Check your Meta Business Manager for approved templates at: https://business.facebook.com/
+            </div>
+
+            <div class="feedback-section">
+                <div class="feedback-label">
+                    <span class="feedback-icon">💬</span>
+                    Additional feedback or details for Q4:
+                </div>
+                <textarea name="q4_feedback" class="feedback" placeholder="Need help setting up template? Have template variables? Other details? Let me know..."></textarea>
+            </div>
+        </div>
+
+        <!-- Q5 -->
+        <div class="answer-form">
+            <div class="question-title">
+                <div class="question-number">5</div>
+                <div>CSV File Path & Column Mapping <span class="required">*</span></div>
+            </div>
+            <div class="question-description">Which CSV file should the scheduler read from?</div>
+
+            <div class="radio-group">
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q5_file" value="kitchen_cabinet_leads_enriched.csv" required>
+                        <div class="option-text">kitchen_cabinet_leads_enriched.csv</div>
+                        <div class="option-description">Location: Sample data csvs/kitchen_cabinet_leads_enriched.csv</div>
+                    </label>
+                </div>
+
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q5_file" value="kitchen_cabinet_leads.csv" required>
+                        <div class="option-text">kitchen_cabinet_leads.csv</div>
+                        <div class="option-description">Location: Sample data csvs/kitchen_cabinet_leads.csv</div>
+                    </label>
+                </div>
+
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q5_file" value="other" required>
+                        <div class="option-text">A different file (specify below)</div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>📋 Column Mapping Confirmation:</strong><br>
+                The CSV uses: title (business name), phone, email, facebook, instagram<br>
+                I will map these correctly. Is this correct? Any changes needed?
+            </div>
+
+            <textarea name="q5_column_notes" placeholder="If you selected 'other' file, provide the file path here.
+Or if you want to change the column mapping, explain here.
+Example: 'Use the file at C:/my_leads.csv' or 'Map column X to phone instead of column E'"></textarea>
+
+            <div class="feedback-section">
+                <div class="feedback-label">
+                    <span class="feedback-icon">💬</span>
+                    Additional feedback or details for Q5:
+                </div>
+                <textarea name="q5_feedback" class="feedback" placeholder="Different column names? Multiple CSV files? Special handling? Let me know..."></textarea>
+            </div>
+        </div>
+
+        <!-- Q6 -->
+        <div class="answer-form">
+            <div class="question-title">
+                <div class="question-number">6</div>
+                <div>Client ID (If Database Integration Chosen)</div>
+            </div>
+            <div class="question-description">Only needed if you chose Option B in Question 1. Skip if you chose CSV-Only.</div>
+
+            <div class="radio-group">
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q6_client" value="create_new">
+                        <div class="option-text">Create a new client called "Kitchen Cabinet Leads"</div>
+                    </label>
+                </div>
+
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q6_client" value="use_existing">
+                        <div class="option-text">Use an existing client</div>
+                    </label>
+                </div>
+            </div>
+
+            <textarea name="q6_client_details" placeholder="If using existing client, provide the client name or ID here.
+Not needed if you chose CSV-Only in Question 1."></textarea>
+
+            <div class="feedback-section">
+                <div class="feedback-label">
+                    <span class="feedback-icon">💬</span>
+                    Additional feedback or details for Q6:
+                </div>
+                <textarea name="q6_feedback" class="feedback" placeholder="Client setup questions? Special configuration needed? Let me know..."></textarea>
+            </div>
+        </div>
+
+        <!-- Q7 -->
+        <div class="answer-form">
+            <div class="question-title">
+                <div class="question-number">7</div>
+                <div>Scheduler Run Time (Optional Bonus)</div>
+            </div>
+            <div class="question-description">What time should the scheduler run each day?</div>
+
+            <div class="radio-group">
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q7_time" value="6am_utc">
+                        <div class="option-text">6:00 AM UTC</div>
+                    </label>
+                </div>
+
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q7_time" value="6am_pst">
+                        <div class="option-text">6:00 AM Pakistan Time (UTC+5)</div>
+                    </label>
+                </div>
+
+                <div class="radio-option">
+                    <label class="radio-label">
+                        <input type="radio" name="q7_time" value="custom">
+                        <div class="option-text">A specific time (specify below)</div>
+                    </label>
+                </div>
+            </div>
+
+            <textarea name="q7_time_custom" placeholder="If you chose 'custom', provide: HH:MM and timezone
+Example: 07:00 AM EST or 14:30 UTC+5"></textarea>
+
+            <div class="feedback-section">
+                <div class="feedback-label">
+                    <span class="feedback-icon">💬</span>
+                    Additional feedback or details for Q7:
+                </div>
+                <textarea name="q7_feedback" class="feedback" placeholder="Different time preferences? Send windows? Rate limiting? Let me know..."></textarea>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="button-group">
+            <button type="submit" class="btn-submit">✓ Submit Answers</button>
+            <button type="reset" class="btn-clear">Clear Form</button>
+        </div>
+
+        <div class="completion-message" id="completionMessage">
+            ✅ Answers submitted! Copy the text below and share it with me.
+        </div>
+
+    </form>
+
+    <!-- Summary Display -->
+    <div id="summarySection" style="display: none;">
+        <div class="answer-form" style="border-left-color: #66cc99;">
+            <div class="question-title" style="color: #66cc99;">
+                <div class="question-number" style="background-color: #66cc99;">✓</div>
+                <div>Your Answers Summary</div>
+            </div>
+            <pre id="summaryText" style="background-color: #1e1e1e; padding: 20px; border-radius: 5px; overflow-x: auto; color: #66cc99; font-family: 'Courier New', monospace; white-space: pre-wrap; word-wrap: break-word;"></pre>
+            <button class="btn-submit" onclick="copyToClipboard()" style="margin-top: 20px;">📋 Copy to Clipboard</button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('answerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            generateSummary();
+            document.getElementById('completionMessage').style.display = 'block';
+            document.getElementById('summarySection').style.display = 'block';
+            window.scrollTo(0, document.body.scrollHeight);
+        });
+
+        function generateSummary() {
+            const formData = new FormData(document.getElementById('answerForm'));
+            const data = Object.fromEntries(formData);
+
+            let summary = `LEAD OUTREACH SCHEDULER - ANSWERS\n`;
+            summary += `${'='.repeat(60)}\n\n`;
+
+            summary += `Q1: Architecture Choice\n`;
+            summary += `${data.q1 || 'Not answered'}\n`;
+            if (data.q1_feedback) summary += `Feedback: ${data.q1_feedback}\n`;
+            summary += `\n`;
+
+            summary += `Q2: Facebook & Instagram Handling\n`;
+            summary += `${data.q2 || 'Not answered'}\n`;
+            if (data.q2_feedback) summary += `Feedback: ${data.q2_feedback}\n`;
+            summary += `\n`;
+
+            summary += `Q3: Message Content\n`;
+            summary += `Type: ${data.q3_type || 'Not answered'}\n`;
+            summary += `Template:\n${data.q3_message || 'Not provided'}\n`;
+            if (data.q3_feedback) summary += `Feedback: ${data.q3_feedback}\n`;
+            summary += `\n`;
+
+            summary += `Q4: WhatsApp Template\n`;
+            summary += `Has Template: ${data.q4_has_template || 'Not answered'}\n`;
+            summary += `Details:\n${data.q4_template_details || 'Not provided'}\n`;
+            if (data.q4_feedback) summary += `Feedback: ${data.q4_feedback}\n`;
+            summary += `\n`;
+
+            summary += `Q5: CSV File & Columns\n`;
+            summary += `File: ${data.q5_file || 'Not answered'}\n`;
+            summary += `Notes:\n${data.q5_column_notes || 'None'}\n`;
+            if (data.q5_feedback) summary += `Feedback: ${data.q5_feedback}\n`;
+            summary += `\n`;
+
+            summary += `Q6: Client ID (Database Only)\n`;
+            summary += `Choice: ${data.q6_client || 'Not answered'}\n`;
+            summary += `Details:\n${data.q6_client_details || 'Not provided'}\n`;
+            if (data.q6_feedback) summary += `Feedback: ${data.q6_feedback}\n`;
+            summary += `\n`;
+
+            summary += `Q7: Run Time\n`;
+            summary += `Time: ${data.q7_time || 'Not answered'}\n`;
+            summary += `Custom Details:\n${data.q7_time_custom || 'Not applicable'}\n`;
+            if (data.q7_feedback) summary += `Feedback: ${data.q7_feedback}\n`;
+            summary += `\n`;
+
+            summary += `${'='.repeat(60)}\n`;
+            summary += `End of answers\n`;
+
+            document.getElementById('summaryText').textContent = summary;
+        }
+
+        function copyToClipboard() {
+            const text = document.getElementById('summaryText').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ Copied to clipboard! You can now paste and share your answers.');
+            }).catch(err => {
+                alert('❌ Failed to copy. Please manually select and copy the text.');
+            });
+        }
+    </script>
+
+</body>
+</html>
