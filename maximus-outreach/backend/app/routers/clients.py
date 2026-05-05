@@ -25,6 +25,7 @@ async def _to_response(client, db: AsyncSession) -> ClientResponse:
         pitch=client.pitch,
         website=client.website,
         phone=client.phone,
+        smtp_id=client.smtp_id,
         from_email=client.from_email,
         from_name=client.from_name,
         custom_instructions=client.custom_instructions,
@@ -78,7 +79,10 @@ async def create_client(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new client. Owner only."""
-    client = await client_service.create_client(payload, current_user.id, db)
+    try:
+        client = await client_service.create_client(payload, current_user.id, db)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     await db.commit()
     await db.refresh(client)
     return await _to_response(client, db)
@@ -96,7 +100,10 @@ async def update_client(
     if client is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found.")
 
-    client = await client_service.update_client(client, payload, db)
+    try:
+        client = await client_service.update_client(client, payload, db)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     await db.commit()
     await db.refresh(client)
     return await _to_response(client, db)

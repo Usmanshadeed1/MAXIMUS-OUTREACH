@@ -21,6 +21,9 @@ class Client(Base):
     pitch: Mapped[str | None] = mapped_column(Text, nullable=True)
     website: Mapped[str | None] = mapped_column(String(500), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    smtp_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("smtp_settings.id", ondelete="SET NULL"), nullable=True
+    )
     from_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     from_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     custom_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)

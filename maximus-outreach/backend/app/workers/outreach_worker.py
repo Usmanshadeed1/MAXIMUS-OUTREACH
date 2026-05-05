@@ -99,6 +99,7 @@ async def _send_email(log: OutreachLog, db) -> bool:
     from sqlalchemy import select as sa_select
     from app.models.lead import Lead
     from app.models.campaign import CampaignEnrollment
+    from app.models.settings import SmtpSettings
 
     if not log.lead_id:
         return False
@@ -124,6 +125,13 @@ async def _send_email(log: OutreachLog, db) -> bool:
                 client_result = await db.execute(sa_select(Client).where(Client.id == campaign.client_id))
                 client = client_result.scalar_one_or_none()
 
+    smtp = None
+    if client and client.smtp_id:
+        smtp_result = await db.execute(sa_select(SmtpSettings).where(SmtpSettings.id == client.smtp_id))
+        smtp = smtp_result.scalar_one_or_none()
+        if smtp and not smtp.is_active:
+            smtp = None
+
     try:
         from app.services.email_service import send_email
         result = await send_email(
@@ -131,8 +139,7 @@ async def _send_email(log: OutreachLog, db) -> bool:
             subject=log.subject or "Hello",
             body_html=log.message_content or "",
             db=db,
-            from_email=client.from_email if client and client.from_email else None,
-            from_name=client.from_name if client and client.from_name else None,
+            smtp=smtp,
         )
         log.external_id = result.get("message_id") if isinstance(result, dict) else None
         return True

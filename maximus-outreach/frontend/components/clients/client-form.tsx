@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useCreateClient, useUpdateClient } from "@/lib/hooks/use-clients";
+import { useSmtpAccounts } from "@/lib/hooks/use-smtp-settings";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +18,6 @@ import {
   Building2,
   Megaphone,
   MessageSquare,
-  Mail,
   ChevronLeft,
   Loader2,
   AlertCircle,
@@ -41,18 +41,16 @@ const clientSchema = z.object({
       "Website must start with http:// or https://"
     ),
   phone: z.string().max(30).optional().or(z.literal("")),
+  smtp_id: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine((v) => !v || /^[0-9a-fA-F-]{36}$/.test(v), "Invalid SMTP account"),
   services: z.string().max(2000).optional().or(z.literal("")),
   target_audience: z.string().max(1000).optional().or(z.literal("")),
   pitch: z.string().max(2000).optional().or(z.literal("")),
   tone: z.enum(["professional", "friendly", "casual", "bold", "empathetic"]),
   custom_instructions: z.string().max(4000).optional().or(z.literal("")),
-  from_email: z
-    .string()
-    .max(255)
-    .optional()
-    .or(z.literal(""))
-    .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Invalid email address"),
-  from_name: z.string().max(100).optional().or(z.literal("")),
 });
 
 type ClientFormValues = z.infer<typeof clientSchema>;
@@ -144,19 +142,19 @@ export function ClientForm({ mode, client }: ClientFormProps) {
   const router = useRouter();
   const createClient = useCreateClient();
   const updateClient = useUpdateClient(client?.id ?? "");
+  const { data: smtpAccounts = [] } = useSmtpAccounts();
 
   const defaultValues: ClientFormValues = {
     name: client?.name ?? "",
     business_type: client?.business_type ?? "",
     website: client?.website ?? "",
     phone: client?.phone ?? "",
+    smtp_id: client?.smtp_id ?? "",
     services: client?.services ?? "",
     target_audience: client?.target_audience ?? "",
     pitch: client?.pitch ?? "",
     tone: (client?.tone as ClientFormValues["tone"]) ?? "professional",
     custom_instructions: client?.custom_instructions ?? "",
-    from_email: client?.from_email ?? "",
-    from_name: client?.from_name ?? "",
   };
 
   const {
@@ -198,13 +196,12 @@ export function ClientForm({ mode, client }: ClientFormProps) {
       business_type: clean(values.business_type),
       website: clean(values.website),
       phone: clean(values.phone),
+      smtp_id: clean(values.smtp_id),
       services: clean(values.services),
       target_audience: clean(values.target_audience),
       pitch: clean(values.pitch),
       tone: values.tone,
       custom_instructions: clean(values.custom_instructions),
-      from_email: clean(values.from_email),
-      from_name: clean(values.from_name),
     };
 
     try {
@@ -315,6 +312,32 @@ export function ClientForm({ mode, client }: ClientFormProps) {
               />
             </Field>
           </div>
+          <Field
+            label="SMTP Account"
+            htmlFor="smtp_id"
+            error={errors.smtp_id?.message}
+            hint="Choose which SMTP account this client should send from"
+          >
+            <select
+              id="smtp_id"
+              className={cn(
+                "w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                errors.smtp_id && "border-destructive"
+              )}
+              {...register("smtp_id")}
+            >
+              <option value="">Use default SMTP account</option>
+              {smtpAccounts
+                .filter((account) => account.is_active)
+                .map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                    {account.is_default ? " (default)" : ""}
+                  </option>
+                ))}
+            </select>
+          </Field>
         </Section>
 
         {/* ── Section 2: Services & Pitch ── */}
@@ -433,44 +456,6 @@ export function ClientForm({ mode, client }: ClientFormProps) {
               {...register("custom_instructions")}
             />
           </Field>
-        </Section>
-
-        {/* ── Section 4: Email Configuration ── */}
-        <Section
-          icon={Mail}
-          title="Email Configuration"
-          description="Displayed as the sender name and address in outbound emails"
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <Field
-              label="From Email"
-              htmlFor="from_email"
-              error={errors.from_email?.message}
-              hint="Override the SMTP account's default sender"
-            >
-              <Input
-                id="from_email"
-                type="email"
-                placeholder="hello@maximus-kitchens.com"
-                aria-invalid={!!errors.from_email}
-                className={cn(errors.from_email && "border-destructive")}
-                {...register("from_email")}
-              />
-            </Field>
-
-            <Field
-              label="From Name"
-              htmlFor="from_name"
-              error={errors.from_name?.message}
-              hint='Displayed as sender e.g. "Maximus Kitchens"'
-            >
-              <Input
-                id="from_name"
-                placeholder="Maximus Kitchens"
-                {...register("from_name")}
-              />
-            </Field>
-          </div>
         </Section>
 
         {/* ── Actions ── */}

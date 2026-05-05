@@ -32,6 +32,7 @@ export interface Client {
   pitch?: string;
   website?: string;
   phone?: string;
+  smtp_id?: string;
   from_email?: string;
   from_name?: string;
   custom_instructions?: string;

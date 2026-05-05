@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.campaign import Campaign
 from app.models.client import Client
 from app.models.lead import Lead
+from app.models.settings import SmtpSettings
 from app.models.user import User, UserClientAssignment
 from app.schemas.clients import ClientCreate, ClientUpdate
 
@@ -88,6 +89,11 @@ async def user_can_access_client(user: User, client_id: uuid.UUID, db: AsyncSess
 
 
 async def create_client(payload: ClientCreate, created_by: uuid.UUID, db: AsyncSession) -> Client:
+    if payload.smtp_id is not None:
+        smtp_exists = await db.execute(select(SmtpSettings.id).where(SmtpSettings.id == payload.smtp_id))
+        if smtp_exists.scalar_one_or_none() is None:
+            raise ValueError("Selected SMTP account does not exist.")
+
     client = Client(
         created_by=created_by,
         name=payload.name,
@@ -98,6 +104,7 @@ async def create_client(payload: ClientCreate, created_by: uuid.UUID, db: AsyncS
         pitch=payload.pitch,
         website=payload.website,
         phone=payload.phone,
+        smtp_id=payload.smtp_id,
         from_email=payload.from_email,
         from_name=payload.from_name,
         custom_instructions=payload.custom_instructions,
@@ -108,6 +115,10 @@ async def create_client(payload: ClientCreate, created_by: uuid.UUID, db: AsyncS
 
 async def update_client(client: Client, payload: ClientUpdate, db: AsyncSession) -> Client:
     update_data = payload.model_dump(exclude_unset=True)
+    if "smtp_id" in update_data and update_data["smtp_id"] is not None:
+        smtp_exists = await db.execute(select(SmtpSettings.id).where(SmtpSettings.id == update_data["smtp_id"]))
+        if smtp_exists.scalar_one_or_none() is None:
+            raise ValueError("Selected SMTP account does not exist.")
     for field, value in update_data.items():
         setattr(client, field, value)
     return client

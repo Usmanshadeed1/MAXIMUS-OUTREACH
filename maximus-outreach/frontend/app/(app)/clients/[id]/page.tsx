@@ -360,12 +360,6 @@ export default function ClientDetailPage({
                 {client.phone && (
                   <InfoRow icon={Phone} label="Phone" value={client.phone} />
                 )}
-                {client.from_email && (
-                  <InfoRow icon={Mail} label="From Email" value={client.from_email} />
-                )}
-                {client.from_name && (
-                  <InfoRow icon={Mail} label="From Name" value={client.from_name} />
-                )}
                 <InfoRow
                   icon={Mic2}
                   label="Outreach Tone"

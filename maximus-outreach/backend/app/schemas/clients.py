@@ -13,6 +13,7 @@ class ClientCreate(BaseModel):
     pitch: str | None = None
     website: str | None = None
     phone: str | None = None
+    smtp_id: uuid.UUID | None = None
     from_email: str | None = None
     from_name: str | None = None
     custom_instructions: str | None = None
@@ -41,6 +42,7 @@ class ClientUpdate(BaseModel):
     pitch: str | None = None
     website: str | None = None
     phone: str | None = None
+    smtp_id: uuid.UUID | None = None
     from_email: str | None = None
     from_name: str | None = None
     custom_instructions: str | None = None
@@ -71,6 +73,7 @@ class ClientResponse(BaseModel):
     pitch: str | None
     website: str | None
     phone: str | None
+    smtp_id: uuid.UUID | None
     from_email: str | None
     from_name: str | None
     custom_instructions: str | None
