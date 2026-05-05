@@ -173,11 +173,11 @@ async def enroll_leads(
     else:
         return EnrollLeadsResponse(enrolled=0, skipped_already_enrolled=0, skipped_not_found=0)
 
-    # Active enrollments (not finished/opted-out) — skip re-enrolling
+    # Any existing enrollment blocks re-enrollment because DB enforces
+    # UNIQUE(campaign_id, lead_id).
     existing_result = await db.execute(
         select(CampaignEnrollment.lead_id).where(
             CampaignEnrollment.campaign_id == campaign_id,
-            CampaignEnrollment.status.notin_(["completed", "opted_out"]),
         )
     )
     already_enrolled = {row[0] for row in existing_result.fetchall()}
@@ -340,11 +340,20 @@ async def execute_campaign(campaign_id: uuid.UUID, db: AsyncSession) -> int:
             enrollment.completed_at = now
             continue
 
-        # Already-dispatched step IDs for this enrollment
+        # Existing outreach statuses by step for this enrollment
         existing_result = await db.execute(
-            select(OutreachLog.step_id).where(OutreachLog.enrollment_id == enrollment.id)
+            select(OutreachLog.step_id, OutreachLog.status).where(OutreachLog.enrollment_id == enrollment.id)
         )
-        dispatched_step_ids = {row[0] for row in existing_result.fetchall()}
+        step_statuses: dict[uuid.UUID, set[str]] = {}
+        for step_id, status in existing_result.fetchall():
+            if step_id is None:
+                continue
+            if step_id not in step_statuses:
+                step_statuses[step_id] = set()
+            if status:
+                step_statuses[step_id].add(status)
+
+        dispatched_step_ids = set(step_statuses.keys())
 
         ref_time = enrollment.activated_at or enrollment.enrolled_at
 
@@ -396,11 +405,26 @@ async def execute_campaign(campaign_id: uuid.UUID, db: AsyncSession) -> int:
 
             created += 1
 
-        # Mark enrollment completed if last step's due time has passed
-        last_step = steps[-1]
+        # Mark completed only when every step reached a terminal outcome.
+        # Prevents "completed" while logs are still queued/pending.
         from datetime import timedelta as td
-        last_due = ref_time + td(days=last_step.delay_days, hours=last_step.delay_hours)
-        if now >= last_due:
+        terminal_statuses = {"sent", "skipped", "failed"}
+        all_steps_terminal = True
+        for step in steps:
+            step_due = ref_time + td(days=step.delay_days, hours=step.delay_hours)
+            if now < step_due:
+                all_steps_terminal = False
+                break
+
+            if not _lead_has_channel_data(lead, step.channel):
+                continue
+
+            statuses = step_statuses.get(step.id, set())
+            if not statuses.intersection(terminal_statuses):
+                all_steps_terminal = False
+                break
+
+        if all_steps_terminal:
             enrollment.status = "completed"
             enrollment.completed_at = now
 

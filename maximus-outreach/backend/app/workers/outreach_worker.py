@@ -7,7 +7,7 @@ Windows: run with --pool=solo
 import asyncio
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.database import AsyncSessionLocal
 from app.models.outreach import OutreachLog
@@ -33,9 +33,13 @@ async def _async_run(task) -> dict:
     skipped = 0
 
     async with AsyncSessionLocal() as db:
+        now = datetime.utcnow()
         result = await db.execute(
             select(OutreachLog)
-            .where(OutreachLog.status == "queued")
+            .where(
+                OutreachLog.status == "queued",
+                or_(OutreachLog.scheduled_at.is_(None), OutreachLog.scheduled_at <= now),
+            )
             .order_by(OutreachLog.scheduled_at.asc().nullsfirst())
             .limit(200)  # process max 200 per run to stay fast
         )
