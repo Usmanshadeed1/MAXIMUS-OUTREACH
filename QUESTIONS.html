@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Outreach Scheduler - Critical Questions</title>
+    <style>
+        body {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 40px;
+            max-width: 1000px;
+            margin: 0 auto;
+            line-height: 1.8;
+        }
+
+        h1 {
+            color: #ff6b6b;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #ffd93d;
+            font-size: 1.8em;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ffd93d;
+            padding-bottom: 10px;
+        }
+
+        .question-block {
+            background-color: #2d2d2d;
+            padding: 25px;
+            margin: 20px 0;
+            border-left: 5px solid #ff6b6b;
+            border-radius: 5px;
+        }
+
+        .question-number {
+            color: #4db8ff;
+            font-weight: bold;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        .question-text {
+            color: #ffffff;
+            font-size: 1.15em;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .options {
+            background-color: #1e1e1e;
+            padding: 15px;
+            border-radius: 3px;
+            margin: 15px 0;
+        }
+
+        .option {
+            margin: 12px 0;
+            padding: 10px;
+            background-color: #3a3a3a;
+            border-left: 3px solid #66cc99;
+            border-radius: 3px;
+        }
+
+        .option-letter {
+            color: #66cc99;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .impact {
+            background-color: #3a4a3a;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #ffaa33;
+            border-radius: 3px;
+            font-size: 0.95em;
+        }
+
+        .impact-title {
+            color: #ffaa33;
+            font-weight: bold;
+        }
+
+        .note {
+            background-color: #2d3a2d;
+            padding: 12px;
+            margin: 10px 0;
+            border-left: 3px solid #66cc99;
+            border-radius: 3px;
+            font-size: 0.95em;
+        }
+
+        .note-title {
+            color: #66cc99;
+            font-weight: bold;
+        }
+
+        .important {
+            background-color: #3a2d2d;
+            padding: 20px;
+            margin: 20px 0;
+            border: 2px solid #ff6b6b;
+            border-radius: 5px;
+        }
+
+        .important-title {
+            color: #ff6b6b;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .codeblock {
+            background-color: #1e1e1e;
+            padding: 15px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            margin: 10px 0;
+            border-left: 3px solid #4db8ff;
+        }
+
+        .summary {
+            background-color: #2d4a2d;
+            padding: 20px;
+            margin: 30px 0;
+            border-left: 5px solid #66cc99;
+            border-radius: 5px;
+        }
+
+        .summary-title {
+            color: #66cc99;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>❓ Lead Outreach Scheduler — Critical Questions</h1>
+
+    <div class="important">
+        <div class="important-title">⚠️ I've reviewed all the code. Here are the key findings:</div>
+        <ul style="font-size: 1.1em; line-height: 2;">
+            <li><strong>This is FastAPI + Celery</strong> (not Django) — fully async, using PostgreSQL + Redis</li>
+            <li><strong>Email & WhatsApp APIs already exist</strong> — I can reuse them directly</li>
+            <li><strong>Facebook & Instagram have NO automation API</strong> — they use a manual queue system only</li>
+            <li><strong>The CSV file needs 6 new columns</strong> — these don't exist yet: email_sent, facebook_sent, instagram_sent, whatsapp_sent, responded, restart_needed</li>
+            <li><strong>Two implementation paths are possible</strong> — see Question #1 below</li>
+        </ul>
+    </div>
+
+    <!-- QUESTION 1 -->
+    <div class="question-block">
+        <div class="question-number">Q1: Architecture — CSV-Only vs. Database Integration?</div>
+        <div class="question-text">Should the scheduler work directly on the CSV file, or integrate with the existing database system?</div>
+
+        <div class="options">
+            <div class="option">
+                <span class="option-letter">A) CSV-ONLY (Standalone)</span>
+                <strong>Read/write the CSV file directly, no database involvement</strong>
+                <ul>
+                    <li>Matches the exact specification you gave me</li>
+                    <li>Completely isolated from the existing campaign system</li>
+                    <li>Simple: read CSV → apply 4 rules → write CSV → log results</li>
+                    <li>Fastest to implement</li>
+                </ul>
+                <div class="impact">
+                    <span class="impact-title">Impact:</span> The scheduler runs independently. The leads in this CSV stay in the CSV, never touch the database. Good for testing/experimentation.
+                </div>
+            </div>
+
+            <div class="option">
+                <span class="option-letter">B) DATABASE-INTEGRATED</span>
+                <strong>Use the existing Campaign/Enrollment/OutreachLog system</strong>
+                <ul>
+                    <li>Imports CSV leads into the database first</li>
+                    <li>Creates a Campaign with 4 steps (one per platform)</li>
+                    <li>Uses the existing scheduler_worker + outreach_worker</li>
+                    <li>Reuses all the existing pacing, retry logic, and tracking</li>
+                    <li>Requires adding DB fields to track sent dates per platform</li>
+                </ul>
+                <div class="impact">
+                    <span class="impact-title">Impact:</span> Leads live in the database. More robust, but requires modifying the existing schema and integrating with a complex campaign system.
+                </div>
+            </div>
+        </div>
+
+        <div class="note">
+            <span class="note-title">My recommendation:</span> Option A (CSV-Only) is simpler and matches your spec exactly. Option B would need significant schema changes and is more complex. Which do you prefer?
+        </div>
+    </div>
+
+    <!-- QUESTION 2 -->
+    <div class="question-block">
+        <div class="question-number">Q2: Facebook & Instagram — How to Handle (No Automation API)?</div>
+        <div class="question-text">The existing system cannot send Facebook or Instagram messages automatically. Only WhatsApp and Email can be sent programmatically. What should the scheduler do for Facebook and Instagram?</div>
+
+        <div class="options">
+            <div class="option">
+                <span class="option-letter">A) Queue for Manual Sending</span>
+                <strong>Add to the existing "Social DM Queue" for a human to send manually</strong>
+                <ul>
+                    <li>Creates a record in the `social_dm_queue` table</li>
+                    <li>A person logs into the app and marks it as sent manually</li>
+                    <li>Scheduler treats it as "sent" for cooldown/restart purposes</li>
+                    <li>Realistic — most teams send social DMs manually anyway</li>
+                </ul>
+                <div class="impact">
+                    <span class="impact-title">Impact:</span> Scheduler marks the sent date, then requires manual completion. Semi-automated workflow.
+                </div>
+            </div>
+
+            <div class="option">
+                <span class="option-letter">B) Skip Entirely</span>
+                <strong>Only contact via Email and WhatsApp, skip Facebook/Instagram</strong>
+                <ul>
+                    <li>If email exists → send email, stop</li>
+                    <li>If email missing but phone exists → send WhatsApp, stop</li>
+                    <li>Never attempt Facebook or Instagram</li>
+                </ul>
+                <div class="impact">
+                    <span class="impact-title">Impact:</span> Scheduler only uses 2 of the 4 platforms. Simpler, but misses Facebook/Instagram leads.
+                </div>
+            </div>
+
+            <div class="option">
+                <span class="option-letter">C) Mark as "Attempted" Without Actually Sending</span>
+                <strong>Pretend we sent to Facebook/Instagram (write the date, but don't queue anything)</strong>
+                <ul>
+                    <li>Writes the sent date to the CSV</li>
+                    <li>Moves to the next lead</li>
+                    <li>No actual message is sent; no queue created</li>
+                </ul>
+                <div class="impact">
+                    <span class="impact-title">Impact:</span> Fast but dishonest. Leads will think they got messaged but didn't. Not recommended.
+                </div>
+            </div>
+        </div>
+
+        <div class="note">
+            <span class="note-title">My recommendation:</span> Option A (queue for manual sending) is the most realistic and aligned with your existing system.
+        </div>
+    </div>
+
+    <!-- QUESTION 3 -->
+    <div class="question-block">
+        <div class="question-number">Q3: Message Content — What Should Be Sent?</div>
+        <div class="question-text">The spec doesn't define the actual message text. What message(s) should the scheduler send to each lead?</div>
+
+        <div class="options">
+            <div class="option">
+                <span class="option-letter">A) Simple Hardcoded Template</span>
+                <strong>Same message on all platforms</strong>
+                <div class="codeblock">
+Subject (Email): "Special Offer for Your Business"
+Body: "Hi {business_name}, we have a special offer for you. Visit {website} to learn more."
+WhatsApp: "Hi {business_name}, check out our special offer!"
+Facebook/Instagram: "Hi {business_name}, check out our special offer!"
+                </div>
+                <div class="impact">
+                    <span class="impact-title">Impact:</span> Quick to implement, but generic.
+                </div>
+            </div>
+
+            <div class="option">
+                <span class="option-letter">B) Template Per Platform</span>
+                <strong>Different message tailored to each platform</strong>
+                <div class="codeblock">
+Email: Professional tone + unsubscribe link
+WhatsApp: Casual, shorter, emoji-friendly
+Facebook/Instagram: Brand voice + link to landing page
+                </div>
+                <div class="impact">
+                    <span class="impact-title">Impact:</span> Better engagement, but requires 4 different templates.
+                </div>
+            </div>
+
+            <div class="option">
+                <span class="option-letter">C) Read from CSV / Config File</span>
+                <strong>Message content stored in a separate config or CSV column</strong>
+                <div class="impact">
+                    <span class="impact-title">Impact:</span> Most flexible, but requires additional setup.
+                </div>
+            </div>
+        </div>
+
+        <div class="note">
+            <span class="note-title">What message content do you want?</span> Please provide the template(s) you'd like to use. Include any placeholders like {business_name}, {phone}, {email}, {address}, {website}.
+        </div>
+    </div>
+
+    <!-- QUESTION 4 -->
+    <div class="question-block">
+        <div class="question-number">Q4: WhatsApp Approved Template</div>
+        <div class="question-text">WhatsApp requires the first message to a lead to use an approved template (compliance requirement). Do you have an approved WhatsApp template set up in Meta Business Manager?</div>
+
+        <div class="options">
+            <div class="option">
+                <span class="option-letter">A) Yes, I have a template name</span>
+                <strong>Provide the exact template name</strong>
+                <div class="codeblock">
+Example: "kitchen_cabinet_offer" or "outreach_intro_en"
+                </div>
+                <div class="impact">
+                    <span class="impact-title">Impact:</span> I'll use this template for the initial WhatsApp message.
+                </div>
+            </div>
+
+            <div class="option">
+                <span class="option-letter">B) No, I don't have a template yet</span>
+                <strong>I'll need to create one, or use freeform text (if allowed)</strong>
+                <div class="impact">
+                    <span class="impact-title">Impact:</span> May require manual Meta setup or a workaround. Check your Meta Business Manager settings.
+                </div>
+            </div>
+        </div>
+
+        <div class="note">
+            <span class="note-title">Required info:</span> If you have an approved template, provide its name and the placeholder variables (if any).
+        </div>
+    </div>
+
+    <!-- QUESTION 5 -->
+    <div class="question-block">
+        <div class="question-number">Q5: CSV File Path & Column Mapping</div>
+        <div class="question-text">Which CSV file should the scheduler read from?</div>
+
+        <div class="options">
+            <div class="option">
+                <span class="option-letter">A) kitchen_cabinet_leads_enriched.csv</span>
+                <div class="codeblock">
+Location: Sample data csvs/kitchen_cabinet_leads_enriched.csv
+Columns: keyword, location, title, address, phone, website, rating, reviews, place_id, data_id, needs_scraping, email, facebook, instagram, linkedin, youtube, twitter, tiktok, scrape_status
+                </div>
+            </div>
+
+            <div class="option">
+                <span class="option-letter">B) kitchen_cabinet_leads.csv</span>
+                <div class="codeblock">
+Location: Sample data csvs/kitchen_cabinet_leads.csv
+(Same columns as above)
+                </div>
+            </div>
+
+            <div class="option">
+                <span class="option-letter">C) A different file</span>
+                Provide the exact file path
+            </div>
+        </div>
+
+        <div class="note">
+            <span class="note-title">Column Mapping Note:</span> Your spec says column C = "name", but the CSV uses "title" for the business name. I'll map:
+            <ul>
+                <li>title → business_name</li>
+                <li>phone → phone (for WhatsApp)</li>
+                <li>email → email</li>
+                <li>facebook → facebook</li>
+                <li>instagram → instagram</li>
+            </ul>
+            Is this correct, or should I use different columns?
+        </div>
+    </div>
+
+    <!-- QUESTION 6 -->
+    <div class="question-block">
+        <div class="question-number">Q6: Multi-Tenant Client ID (If Database Integration Chosen)</div>
+        <div class="question-text">If you choose Option B (database integration in Q1), the system is multi-tenant. Which client should own these leads?</div>
+
+        <div class="options">
+            <div class="option">
+                <span class="option-letter">A) Create a new client called "Kitchen Cabinet Leads"</span>
+                I'll create it automatically during the first run.
+            </div>
+
+            <div class="option">
+                <span class="option-letter">B) Use an existing client ID</span>
+                Provide the client ID or name
+            </div>
+        </div>
+
+        <div class="note">
+            <span class="note-title">Only needed if Q1 = Option B.</span> Skip this if you choose CSV-Only (Option A).
+        </div>
+    </div>
+
+    <!-- BONUS QUESTIONS -->
+    <div class="question-block">
+        <div class="question-number">Q7: Scheduler Run Time (Bonus)</div>
+        <div class="question-text">What time should the scheduler run each day? Your spec says "early morning".</div>
+
+        <div class="options">
+            <div class="option">
+                <span class="option-letter">A) 6:00 AM UTC</span>
+            </div>
+
+            <div class="option">
+                <span class="option-letter">B) 6:00 AM Pakistan Time (UTC+5)</span>
+            </div>
+
+            <div class="option">
+                <span class="option-letter">C) A specific time</span>
+                Provide: HH:MM and timezone
+            </div>
+        </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="summary">
+        <div class="summary-title">✅ What I'll Do Once You Answer</div>
+        <p>Based on your answers, I will:</p>
+        <ol style="font-size: 1.1em; line-height: 2;">
+            <li>Create a new Celery worker task: <code>app/workers/csv_outreach_worker.py</code></li>
+            <li>Implement all 4 rules (daily cap, cooldown, response check, next platform)</li>
+            <li>Add the 6 missing CSV columns (or use database if you choose Option B)</li>
+            <li>Handle email and WhatsApp sending via existing services</li>
+            <li>Handle Facebook/Instagram per your choice in Q2</li>
+            <li>Wire into the Celery Beat schedule to run daily</li>
+            <li>Provide comprehensive logging of each run</li>
+            <li>Test thoroughly before handing it over</li>
+        </ol>
+    </div>
+
+</body>
+</html>
