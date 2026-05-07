@@ -279,7 +279,12 @@ async def send_now(
     dispatched = await campaign_service.execute_campaign(campaign_id, db)
 
     from app.workers.outreach_worker import _async_run as _outreach_run
+    from app.database import AsyncSessionLocal
     result = await _outreach_run(None)
+
+    # Second pass — marks enrollments as completed now that emails are sent
+    async with AsyncSessionLocal() as db2:
+        await campaign_service.execute_campaign(campaign_id, db2)
 
     return {
         "dispatched": dispatched,
