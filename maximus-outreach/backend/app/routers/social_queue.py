@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.outreach import SocialDmQueue
+from app.models.lead import Lead
+from app.models.client import Client
 from app.models.user import User
 from app.schemas.social_dm import BulkMarkSentRequest, SocialDmResponse, SocialDmStats
 from app.services.social_dm_service import get_dm_by_id
@@ -46,15 +48,24 @@ async def list_social_queue(
         filters.append(SocialDmQueue.created_at <= datetime.combine(date_to, datetime.max.time()))
 
     stmt = (
-        select(SocialDmQueue)
+        select(SocialDmQueue, Lead.business_name.label("lead_name"), Client.name.label("client_name"))
+        .outerjoin(Lead, SocialDmQueue.lead_id == Lead.id)
+        .outerjoin(Client, SocialDmQueue.client_id == Client.id)
         .where(*filters)
         .order_by(SocialDmQueue.created_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
     result = await db.execute(stmt)
-    rows = result.scalars().all()
-    return [SocialDmResponse.model_validate(r) for r in rows]
+    rows = result.all()
+    return [
+        SocialDmResponse(
+            **{c.key: getattr(row[0], c.key) for c in SocialDmQueue.__table__.columns},
+            lead_name=row[1],
+            client_name=row[2],
+        )
+        for row in rows
+    ]
 
 
 # ---------------------------------------------------------------------------

@@ -17,8 +17,10 @@ class SocialDmResponse(BaseModel):
     scheduled_for: datetime | None
     sent_at: datetime | None
     created_at: datetime
+    lead_name: str | None = None
+    client_name: str | None = None
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": False}
 
 
 class SocialDmStats(BaseModel):

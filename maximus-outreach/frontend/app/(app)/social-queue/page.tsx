@@ -74,11 +74,27 @@ function DmCard({ item, isActive, onMarkSent, onSkip, isPending, sentId, skipped
   const isSkipping = isPending && skippedId === item.id;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(item.message_content).then(() => {
+    const text = item.message_content;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopied(true);
+        toast.success("Message copied!");
+        setTimeout(() => setCopied(false), 2000);
+      });
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
       setCopied(true);
       toast.success("Message copied!");
       setTimeout(() => setCopied(false), 2000);
-    });
+    }
   };
 
   return (
@@ -92,12 +108,24 @@ function DmCard({ item, isActive, onMarkSent, onSkip, isPending, sentId, skipped
       <div className="px-5 py-4">
         {/* Header row */}
         <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
+            {/* Lead + client names */}
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="text-sm font-semibold text-foreground truncate">
+                {item.lead_name ?? "Unknown Lead"}
+              </span>
+              {item.client_name && (
+                <span className="text-[11px] text-muted-foreground border border-border rounded px-1.5 py-0.5 shrink-0">
+                  {item.client_name}
+                </span>
+              )}
+            </div>
+            {/* Platform + URL */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium", platCfg.bg, platCfg.color)}>
                 {platCfg.label}
               </span>
-              <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+              <span className="text-xs text-muted-foreground truncate max-w-[220px]">
                 {item.profile_url}
               </span>
             </div>
@@ -255,9 +283,20 @@ export default function SocialQueuePage() {
       if (!active) return;
 
       if (e.key === "c" || e.key === "C") {
-        navigator.clipboard.writeText(active.message_content).then(() =>
-          toast.success("Message copied!")
-        );
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(active.message_content).then(() => toast.success("Message copied!"));
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = active.message_content;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+          toast.success("Message copied!");
+        }
       } else if (e.key === "o" || e.key === "O") {
         window.open(active.profile_url, "_blank", "noopener,noreferrer");
       } else if (e.key === "s" || e.key === "S") {

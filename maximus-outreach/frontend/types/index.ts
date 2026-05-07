@@ -168,6 +168,8 @@ export interface SocialDmQueueItem {
   scheduled_for?: string;
   sent_at?: string;
   created_at: string;
+  lead_name?: string | null;
+  client_name?: string | null;
 }
 
 // ─── Settings ───────────────────────────────────────────────────
