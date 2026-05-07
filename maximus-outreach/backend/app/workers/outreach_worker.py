@@ -138,14 +138,17 @@ async def _send_email(log: OutreachLog, db) -> bool:
 
     try:
         from app.services.email_service import send_email
+        subject = log.subject or (f"A message for {lead.business_name}" if lead.business_name else "Quick message for you")
         result = await send_email(
             to=lead.email,
-            subject=log.subject or "Hello",
+            subject=subject,
             body_html=log.message_content or "",
             db=db,
             smtp=smtp,
         )
         log.external_id = result.get("message_id") if isinstance(result, dict) else None
+        if isinstance(result, dict) and not result.get("success"):
+            raise RuntimeError(result.get("error") or "Email send failed")
         return True
     except Exception:
         raise

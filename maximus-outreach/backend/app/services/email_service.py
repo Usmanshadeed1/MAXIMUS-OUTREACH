@@ -1,4 +1,4 @@
-"""Service: Email sending via SMTP with tracking pixel + link rewriting."""
+"""Service: Email sending via SMTP."""
 import re
 import uuid
 from email.mime.application import MIMEApplication
@@ -9,7 +9,6 @@ import aiosmtplib
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.models.settings import SmtpSettings
 from app.utils.encryption import decrypt_value
 
@@ -18,42 +17,12 @@ from app.utils.encryption import decrypt_value
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _tracking_pixel_html(message_id: str) -> str:
-    """Return a 1x1 transparent tracking pixel img tag."""
-    url = f"{settings.TRACKING_BASE_URL}/track/open/{message_id}"
-    return (
-        f'<img src="{url}" width="1" height="1" '
-        'style="display:none;border:0;" alt="" />'
-    )
-
-
-def _rewrite_links(html: str, message_id: str) -> str:
-    """Wrap all href links for click tracking."""
-    base = settings.TRACKING_BASE_URL
-
-    def replace_link(m: re.Match) -> str:
-        original_url = m.group(1)
-        # Skip mailto, tel, anchor, and already-rewritten tracking links
-        if original_url.startswith(("mailto:", "tel:", "#", f"{base}/track/")):
-            return m.group(0)
-        from urllib.parse import quote
-        encoded = quote(original_url, safe="")
-        tracked = f"{base}/track/click/{message_id}?url={encoded}"
-        return f'href="{tracked}"'
-
-    return re.sub(r'href="([^"]+)"', replace_link, html, flags=re.IGNORECASE)
-
-
-def _inject_tracking(html: str, message_id: str) -> str:
-    """Inject tracking pixel before </body> and rewrite links."""
-    html = _rewrite_links(html, message_id)
-    pixel = _tracking_pixel_html(message_id)
-    if "</body>" in html.lower():
-        idx = html.lower().rfind("</body>")
-        html = html[:idx] + pixel + html[idx:]
-    else:
-        html += pixel
-    return html
+def _strip_html(html: str) -> str:
+    """Convert HTML to plain text by stripping tags."""
+    text = re.sub(r'<br\s*/?>', '\n', html, flags=re.IGNORECASE)
+    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
 
 
 def _build_mime(
@@ -63,25 +32,20 @@ def _build_mime(
     subject: str,
     body_html: str,
     body_text: str | None,
-    message_id: str,
     attachments: list[dict] | None,
 ) -> MIMEMultipart:
-    """Build a MIME message with optional plain-text alternative and attachments."""
+    """Build a MIME message with plain-text alternative and optional attachments."""
     msg = MIMEMultipart("mixed")
     sender = f"{from_name} <{from_email}>" if from_name else from_email
     msg["From"] = sender
     msg["To"] = to
     msg["Subject"] = subject
-    msg["Message-ID"] = f"<{message_id}@maximus-outreach>"
-
-    # Build HTML with tracking
-    tracked_html = _inject_tracking(body_html, message_id)
 
     # Attach alternative part (text + html)
     alt = MIMEMultipart("alternative")
-    if body_text:
-        alt.attach(MIMEText(body_text, "plain", "utf-8"))
-    alt.attach(MIMEText(tracked_html, "html", "utf-8"))
+    plain = body_text or _strip_html(body_html)
+    alt.attach(MIMEText(plain, "plain", "utf-8"))
+    alt.attach(MIMEText(body_html, "html", "utf-8"))
     msg.attach(alt)
 
     # Attachments: list of {"filename": str, "content": bytes, "mime_type": str}
@@ -199,7 +163,6 @@ async def send_email(
         subject=subject,
         body_html=body_html,
         body_text=body_text,
-        message_id=msg_id,
         attachments=attachments,
     )
 
