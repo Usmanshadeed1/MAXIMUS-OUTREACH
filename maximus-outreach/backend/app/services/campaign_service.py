@@ -384,22 +384,28 @@ async def execute_campaign(campaign_id: uuid.UUID, db: AsyncSession) -> int:
             )
 
             if step.channel == "social_dm":
-                platform = _detect_social_platform(lead)
-                profile_url = _get_social_profile(lead) or ""
-                log.social_platform = platform
-                log.social_profile_url = profile_url
-                db.add(log)
-                await db.flush()
-                db.add(SocialDmQueue(
-                    outreach_log_id=log.id,
-                    lead_id=lead.id,
-                    client_id=campaign.client_id,
-                    platform=platform,
-                    profile_url=profile_url,
-                    message_content=message or f"Hi {lead.business_name or 'there'}",
-                    status="pending",
-                    scheduled_for=due_at,
-                ))
+                social_profiles = _get_all_social_profiles(lead)
+                if social_profiles:
+                    first_platform, first_url = social_profiles[0]
+                    log.social_platform = first_platform
+                    log.social_profile_url = first_url
+                    db.add(log)
+                    await db.flush()
+                    for platform, profile_url in social_profiles:
+                        db.add(SocialDmQueue(
+                            outreach_log_id=log.id,
+                            lead_id=lead.id,
+                            client_id=campaign.client_id,
+                            platform=platform,
+                            profile_url=profile_url,
+                            message_content=message or f"Hi {lead.business_name or 'there'}",
+                            status="pending",
+                            scheduled_for=due_at,
+                        ))
+                else:
+                    log.social_platform = "unknown"
+                    log.social_profile_url = ""
+                    db.add(log)
             else:
                 db.add(log)
 
@@ -458,19 +464,17 @@ def _render_template(template: str, lead: Lead) -> str:
     )
 
 
-def _get_social_profile(lead: Lead) -> str | None:
-    return lead.instagram or lead.facebook or lead.linkedin or lead.twitter or lead.tiktok
-
-
-def _detect_social_platform(lead: Lead) -> str:
+def _get_all_social_profiles(lead: Lead) -> list[tuple[str, str]]:
+    """Return a list of (platform, url) for every social profile the lead has."""
+    profiles = []
     if lead.instagram:
-        return "instagram"
+        profiles.append(("instagram", lead.instagram))
     if lead.facebook:
-        return "facebook"
+        profiles.append(("facebook", lead.facebook))
     if lead.linkedin:
-        return "linkedin"
+        profiles.append(("linkedin", lead.linkedin))
     if lead.twitter:
-        return "twitter"
+        profiles.append(("twitter", lead.twitter))
     if lead.tiktok:
-        return "tiktok"
-    return "unknown"
+        profiles.append(("tiktok", lead.tiktok))
+    return profiles

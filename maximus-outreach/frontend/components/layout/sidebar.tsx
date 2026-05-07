@@ -14,11 +14,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { useState, useEffect, useRef } from "react";
-import { X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 
 const mainNavItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -40,14 +42,25 @@ type NavItem = {
   icon: React.ElementType;
 };
 
+function Badge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 function NavItem({
   item,
   isActive,
   collapsed,
+  badge,
 }: {
   item: NavItem;
   isActive: boolean;
   collapsed: boolean;
+  badge?: number;
 }) {
   const Icon = item.icon;
   return (
@@ -72,14 +85,21 @@ function NavItem({
           aria-hidden="true"
         />
       )}
-      <Icon
-        className={cn(
-          "h-4 w-4 shrink-0 transition-colors",
-          isActive ? "text-primary" : "text-sidebar-foreground/50"
+      <div className="relative shrink-0">
+        <Icon
+          className={cn(
+            "h-4 w-4 transition-colors",
+            isActive ? "text-primary" : "text-sidebar-foreground/50"
+          )}
+          aria-hidden="true"
+        />
+        {/* Dot indicator when collapsed */}
+        {collapsed && badge && badge > 0 && (
+          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
         )}
-        aria-hidden="true"
-      />
+      </div>
       {!collapsed && <span className="truncate">{item.label}</span>}
+      {!collapsed && badge !== undefined && <Badge count={badge} />}
     </Link>
   );
 }
@@ -106,6 +126,29 @@ export function Sidebar({
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
+
+  const { data: socialStats } = useQuery({
+    queryKey: ["social-queue-stats"],
+    queryFn: async () => {
+      const { data } = await api.get<{ pending: number }>("/social-queue/stats");
+      return data;
+    },
+    refetchInterval: 30_000,
+  });
+
+  const { data: reviewCount } = useQuery({
+    queryKey: ["review-queue-count"],
+    queryFn: async () => {
+      const { data } = await api.get<{ count: number }>("/review-queue/count");
+      return data;
+    },
+    refetchInterval: 30_000,
+  });
+
+  const badges: Record<string, number> = {
+    "/social-queue": socialStats?.pending ?? 0,
+    "/review-queue": reviewCount?.count ?? 0,
+  };
 
   return (
     <aside
@@ -169,6 +212,7 @@ export function Sidebar({
             item={item}
             isActive={isActive(item.href)}
             collapsed={collapsed}
+            badge={badges[item.href]}
           />
         ))}
 
