@@ -4,6 +4,7 @@ import uuid
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formatdate, make_msgid
 
 import aiosmtplib
 from sqlalchemy import select, update
@@ -35,32 +36,42 @@ def _build_mime(
     attachments: list[dict] | None,
 ) -> MIMEMultipart:
     """Build a MIME message with plain-text alternative and optional attachments."""
-    msg = MIMEMultipart("mixed")
     sender = f"{from_name} <{from_email}>" if from_name else from_email
-    msg["From"] = sender
-    msg["To"] = to
-    msg["Subject"] = subject
-
-    # Attach alternative part (text + html)
-    alt = MIMEMultipart("alternative")
     plain = body_text or _strip_html(body_html)
-    alt.attach(MIMEText(plain, "plain", "utf-8"))
-    alt.attach(MIMEText(body_html, "html", "utf-8"))
-    msg.attach(alt)
 
-    # Attachments: list of {"filename": str, "content": bytes, "mime_type": str}
-    for att in (attachments or []):
-        main_type, sub_type = att.get("mime_type", "application/octet-stream").split("/", 1)
-        if main_type == "text":
-            part: MIMEApplication | MIMEText = MIMEText(
-                att["content"].decode("utf-8", errors="replace"), sub_type, "utf-8"
-            )
-        else:
-            part = MIMEApplication(att["content"], _subtype=sub_type)
-        part.add_header(
-            "Content-Disposition", "attachment", filename=att["filename"]
-        )
-        msg.attach(part)
+    has_attachments = bool(attachments)
+
+    if has_attachments:
+        msg = MIMEMultipart("mixed")
+        msg["From"] = sender
+        msg["To"] = to
+        msg["Subject"] = subject
+        msg["Date"] = formatdate(localtime=False)
+        msg["Message-ID"] = make_msgid(domain=from_email.split("@")[-1] if "@" in from_email else "mail")
+        alt = MIMEMultipart("alternative")
+        alt.attach(MIMEText(plain, "plain", "utf-8"))
+        alt.attach(MIMEText(body_html, "html", "utf-8"))
+        msg.attach(alt)
+        for att in attachments:
+            main_type, sub_type = att.get("mime_type", "application/octet-stream").split("/", 1)
+            if main_type == "text":
+                part: MIMEApplication | MIMEText = MIMEText(
+                    att["content"].decode("utf-8", errors="replace"), sub_type, "utf-8"
+                )
+            else:
+                part = MIMEApplication(att["content"], _subtype=sub_type)
+            part.add_header("Content-Disposition", "attachment", filename=att["filename"])
+            msg.attach(part)
+    else:
+        # No attachments — use alternative directly (cleaner, less spam-prone)
+        msg = MIMEMultipart("alternative")
+        msg["From"] = sender
+        msg["To"] = to
+        msg["Subject"] = subject
+        msg["Date"] = formatdate(localtime=False)
+        msg["Message-ID"] = make_msgid(domain=from_email.split("@")[-1] if "@" in from_email else "mail")
+        msg.attach(MIMEText(plain, "plain", "utf-8"))
+        msg.attach(MIMEText(body_html, "html", "utf-8"))
 
     return msg
 
