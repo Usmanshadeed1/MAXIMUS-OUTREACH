@@ -28,23 +28,31 @@
 
 Both backend and frontend run as hidden background processes. All terminals can be closed.
 
-### Backend (PID changes on each start)
-Started with:
-```powershell
-Start-Process -FilePath "C:\maximus-outreach\MAXIMUS-OUTREACH\maximus-outreach\backend\venv\Scripts\python.exe" -ArgumentList "-m uvicorn app.main:app --host 0.0.0.0 --port 8001" -WorkingDirectory "C:\maximus-outreach\MAXIMUS-OUTREACH\maximus-outreach\backend" -WindowStyle Hidden
-```
-
-### Frontend (PID changes on each start)
-Started with:
-```powershell
-Start-Process -FilePath "C:\Windows\System32\cmd.exe" -ArgumentList '/c "cd /d C:\maximus-outreach\MAXIMUS-OUTREACH\maximus-outreach\frontend && npm run dev -- --port 3000"' -WindowStyle Hidden
-```
-
 ---
+
+## Start / Restart Everything (One Command)
+
+Use this single command to stop all running services and restart backend, Celery worker, Celery beat, and frontend. Run from any PowerShell window on VPS:
+
+```powershell
+Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match "uvicorn app.main:app" -and $_.CommandLine -match "--port 8001" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }; Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match "celery.exe" -and $_.CommandLine -match "maximus-outreach" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }; Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match "next dev" -and $_.CommandLine -match "maximus-outreach" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }; Start-Sleep -Seconds 3; Start-Process -FilePath "C:\maximus-outreach\MAXIMUS-OUTREACH\maximus-outreach\backend\venv\Scripts\python.exe" -ArgumentList "-m uvicorn app.main:app --host 0.0.0.0 --port 8001" -WorkingDirectory "C:\maximus-outreach\MAXIMUS-OUTREACH\maximus-outreach\backend" -WindowStyle Hidden; Start-Process -FilePath "C:\maximus-outreach\MAXIMUS-OUTREACH\maximus-outreach\backend\venv\Scripts\celery.exe" -ArgumentList "-A app.workers.celery_app worker --pool=solo --loglevel=info" -WorkingDirectory "C:\maximus-outreach\MAXIMUS-OUTREACH\maximus-outreach\backend" -WindowStyle Hidden; Start-Process -FilePath "C:\maximus-outreach\MAXIMUS-OUTREACH\maximus-outreach\backend\venv\Scripts\celery.exe" -ArgumentList "-A app.workers.celery_app beat --loglevel=info --schedule celerybeat-schedule" -WorkingDirectory "C:\maximus-outreach\MAXIMUS-OUTREACH\maximus-outreach\backend" -WindowStyle Hidden; Start-Process -FilePath "C:\Windows\System32\cmd.exe" -ArgumentList '/c "cd /d C:\maximus-outreach\MAXIMUS-OUTREACH\maximus-outreach\frontend && npm run dev -- --port 3000"' -WindowStyle Hidden; Start-Sleep -Seconds 10; try { (Invoke-WebRequest "http://localhost:8001/health" -UseBasicParsing).StatusCode } catch { "backend not ready yet" }
+```
+
+Returns `200` = everything running. You can close the terminal after.
+
+## Pull Latest Code from GitHub + Restart
+
+Run this after every `git push` from local to update VPS:
+
+```powershell
+cd C:\maximus-outreach\MAXIMUS-OUTREACH; git pull
+```
+
+Then run the full restart command above.
 
 ## If VPS Reboots — Restart Everything
 
-Open any PowerShell window on VPS and run both commands above (Backend first, then Frontend). Wait 10 seconds after each before checking.
+Run the "Start / Restart Everything" command above from any PowerShell window.
 
 ### Verify both are running:
 ```powershell

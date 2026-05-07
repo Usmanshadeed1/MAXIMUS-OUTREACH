@@ -43,13 +43,13 @@ celery_app.conf.update(
             "task": "app.workers.pacing_worker.run_pacing",
             "schedule": 900,  # 15 minutes
         },
-        "scheduler-every-5-min": {
+        "scheduler-every-2-min": {
             "task": "app.workers.scheduler_worker.run_scheduler",
-            "schedule": 300,  # 5 minutes
+            "schedule": 120,  # 2 minutes
         },
-        "outreach-queue-every-5-min": {
+        "outreach-queue-every-2-min": {
             "task": "app.workers.outreach_worker.process_outreach_queue",
-            "schedule": 300,  # 5 minutes
+            "schedule": 120,  # 2 minutes
         },
     },
 )

@@ -261,6 +261,35 @@ async def resume_campaign(
 
 
 # ---------------------------------------------------------------------------
+# Send Now — runs scheduler + outreach worker inline for this campaign
+# ---------------------------------------------------------------------------
+
+@router.post("/campaigns/{campaign_id}/send-now")
+async def send_now(
+    campaign_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    campaign = await _get_campaign_or_404(campaign_id, current_user, db)
+    if campaign.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Campaign must be active to send now.",
+        )
+    dispatched = await campaign_service.execute_campaign(campaign_id, db)
+
+    from app.workers.outreach_worker import _async_run as _outreach_run
+    result = await _outreach_run(None)
+
+    return {
+        "dispatched": dispatched,
+        "sent": result["sent"],
+        "failed": result["failed"],
+        "skipped": result["skipped"],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Pacing status
 # ---------------------------------------------------------------------------
 

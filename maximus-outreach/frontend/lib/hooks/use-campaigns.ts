@@ -283,6 +283,23 @@ export interface OutreachLogList {
   total_pages: number;
 }
 
+export function useSendNow(campaignId: string, clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<{ dispatched: number; sent: number; failed: number; skipped: number }>(
+        `/campaigns/${campaignId}/send-now`
+      );
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["campaign", campaignId] });
+      qc.invalidateQueries({ queryKey: ["campaign-logs", campaignId] });
+      qc.invalidateQueries({ queryKey: ["campaigns", clientId] });
+    },
+  });
+}
+
 export function useCampaignLogs(
   campaignId: string,
   filters: { channel?: string; status?: string; page?: number }

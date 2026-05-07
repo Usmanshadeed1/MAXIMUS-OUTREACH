@@ -27,7 +27,7 @@ def process_outreach_queue(self) -> dict:
     return asyncio.run(_async_run(self))
 
 
-async def _async_run(task) -> dict:
+async def _async_run(task=None) -> dict:
     sent = 0
     failed = 0
     skipped = 0

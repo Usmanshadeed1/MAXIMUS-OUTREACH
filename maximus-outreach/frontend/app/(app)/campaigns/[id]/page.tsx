@@ -11,6 +11,7 @@ import {
   RotateCcw,
   Trash2,
   Loader2,
+  Zap,
   Users,
   ListFilter,
   Settings2,
@@ -49,6 +50,7 @@ import {
   useEnrollLeads,
   usePacingStatus,
   useCampaignLogs,
+  useSendNow,
   type PacingStatus,
   type StepCreatePayload,
   type StepUpdatePayload,
@@ -541,12 +543,13 @@ export default function CampaignDetailPage() {
   const pauseMutation = usePauseCampaign(campaign?.client_id ?? "");
   const resumeMutation = useResumeCampaign(campaign?.client_id ?? "");
   const deleteMutation = useDeleteCampaign(campaign?.client_id ?? "");
+  const sendNowMutation = useSendNow(id, campaign?.client_id ?? "");
   const addStepMutation = useAddStep(id, campaign?.client_id ?? "");
   const updateStepMutation = useUpdateStep(id, campaign?.client_id ?? "");
   const deleteStepMutation = useDeleteStep(id, campaign?.client_id ?? "");
 
   const isActionPending =
-    startMutation.isPending || pauseMutation.isPending || resumeMutation.isPending;
+    startMutation.isPending || pauseMutation.isPending || resumeMutation.isPending || sendNowMutation.isPending;
 
   // ── Step reorder helpers (local optimistic swap) ──
   const handleMoveUp = (stepId: string) => {
@@ -651,20 +654,37 @@ export default function CampaignDetailPage() {
             </button>
           )}
           {campaign.status === "active" && (
-            <button
-              type="button"
-              onClick={() => {
-                pauseMutation.mutate(campaign.id, {
-                  onSuccess: () => toast.success("Campaign paused"),
-                  onError: () => toast.error("Failed to pause"),
-                });
-              }}
-              disabled={isActionPending}
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
-            >
-              {pauseMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Pause className="h-3.5 w-3.5" />}
-              Pause
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  sendNowMutation.mutate(undefined, {
+                    onSuccess: (r) =>
+                      toast.success(`Sent ${r.sent} message${r.sent !== 1 ? "s" : ""}${r.failed ? ` (${r.failed} failed)` : ""}`),
+                    onError: () => toast.error("Send Now failed"),
+                  });
+                }}
+                disabled={isActionPending}
+                className={cn(buttonVariants({ variant: "default", size: "sm" }), "gap-2")}
+              >
+                {sendNowMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+                Send Now
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  pauseMutation.mutate(campaign.id, {
+                    onSuccess: () => toast.success("Campaign paused"),
+                    onError: () => toast.error("Failed to pause"),
+                  });
+                }}
+                disabled={isActionPending}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
+              >
+                {pauseMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Pause className="h-3.5 w-3.5" />}
+                Pause
+              </button>
+            </>
           )}
           {campaign.status === "paused" && (
             <button
