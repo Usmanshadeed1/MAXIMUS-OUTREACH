@@ -152,7 +152,7 @@ async def send_email(
         }
 
     sender_email = from_email or smtp.from_email or smtp.username
-    sender_name = from_name or smtp.from_name
+    sender_name = from_name or smtp.from_name or smtp.name
 
     password = decrypt_value(smtp.password_encrypted)
 
