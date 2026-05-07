@@ -157,6 +157,8 @@ async def _send_email(log: OutreachLog, db) -> bool:
 async def _send_sms(log: OutreachLog, db) -> bool:
     from sqlalchemy import select as sa_select
     from app.models.lead import Lead
+    from app.models.campaign import CampaignEnrollment, Campaign
+    from app.models.client import Client
 
     if not log.lead_id:
         return False
@@ -166,14 +168,33 @@ async def _send_sms(log: OutreachLog, db) -> bool:
     if not lead or not lead.phone:
         return False
 
+    # Resolve client_id via enrollment → campaign
+    client_id = None
+    if log.enrollment_id:
+        enroll_result = await db.execute(
+            sa_select(CampaignEnrollment).where(CampaignEnrollment.id == log.enrollment_id)
+        )
+        enrollment = enroll_result.scalar_one_or_none()
+        if enrollment:
+            camp_result = await db.execute(sa_select(Campaign).where(Campaign.id == enrollment.campaign_id))
+            campaign = camp_result.scalar_one_or_none()
+            if campaign:
+                client_id = campaign.client_id
+
+    if client_id is None:
+        raise RuntimeError("Could not resolve client_id for SMS dispatch")
+
     try:
         from app.services.sms_service import send_sms
         result = await send_sms(
-            to_phone=lead.phone,
-            message=log.message_content or "",
+            to=lead.phone,
+            body=log.message_content or "",
+            client_id=client_id,
             db=db,
         )
         log.external_id = result.get("sid") if isinstance(result, dict) else None
+        if isinstance(result, dict) and not result.get("success"):
+            raise RuntimeError(result.get("error") or "SMS send failed")
         return True
     except Exception:
         raise
@@ -182,6 +203,7 @@ async def _send_sms(log: OutreachLog, db) -> bool:
 async def _send_whatsapp(log: OutreachLog, db) -> bool:
     from sqlalchemy import select as sa_select
     from app.models.lead import Lead
+    from app.models.campaign import CampaignEnrollment, Campaign
 
     if not log.lead_id:
         return False
@@ -191,15 +213,33 @@ async def _send_whatsapp(log: OutreachLog, db) -> bool:
     if not lead or not lead.phone:
         return False
 
+    # Resolve client_id via enrollment → campaign
+    client_id = None
+    if log.enrollment_id:
+        enroll_result = await db.execute(
+            sa_select(CampaignEnrollment).where(CampaignEnrollment.id == log.enrollment_id)
+        )
+        enrollment = enroll_result.scalar_one_or_none()
+        if enrollment:
+            camp_result = await db.execute(sa_select(Campaign).where(Campaign.id == enrollment.campaign_id))
+            campaign = camp_result.scalar_one_or_none()
+            if campaign:
+                client_id = campaign.client_id
+
+    if client_id is None:
+        raise RuntimeError("Could not resolve client_id for WhatsApp dispatch")
+
     try:
         from app.services.whatsapp_service import send_whatsapp
         result = await send_whatsapp(
-            to_phone=lead.phone,
-            message=log.message_content or "",
-            media_urls=log.media_urls or [],
+            to=lead.phone,
+            body=log.message_content or "",
+            client_id=client_id,
             db=db,
         )
-        log.external_id = result.get("sid") if isinstance(result, dict) else None
+        log.external_id = result.get("message_id") if isinstance(result, dict) else None
+        if isinstance(result, dict) and not result.get("success"):
+            raise RuntimeError(result.get("error") or "WhatsApp send failed")
         return True
     except Exception:
         raise
