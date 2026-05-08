@@ -8,6 +8,7 @@ from app.models.conversation import Conversation, Message
 from app.models.settings import AiApiKey, EmailWarmupSchedule, SmtpSettings, SmsProviderSettings, SmsPhoneNumber, WhatsAppSettings
 from app.models.analytics import AnalyticsEvent
 from app.models.media import MediaFile
+from app.models.message_template import MessageTemplate
 
 __all__ = [
     "User",
@@ -31,4 +32,5 @@ __all__ = [
     "EmailWarmupSchedule",
     "AnalyticsEvent",
     "MediaFile",
+    "MessageTemplate",
 ]

@@ -36,6 +36,8 @@ import {
   Plus,
   Download,
   Loader2,
+  Trash2,
+  LayoutTemplate,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +54,14 @@ import { CsvImportModal } from "@/components/leads/csv-import-modal";
 import { ImportHistory } from "@/components/leads/import-history";
 import { CampaignsList } from "@/components/campaigns/campaigns-list";
 import { usePageTitle } from "@/lib/hooks/use-page-title";
+import {
+  useTemplates,
+  useCreateTemplate,
+  useUpdateTemplate,
+  useDeleteTemplate,
+  type MessageTemplate,
+} from "@/lib/hooks/use-templates";
+import { TemplateDialog } from "@/components/templates/template-dialog";
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 
@@ -139,7 +149,9 @@ export default function ClientDetailPage({
   const searchParams = useSearchParams();
   const { isOwner } = useAuth();
   const [importOpen, setImportOpen] = useState(false);
-  usePageTitle("Client");
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [templateToEdit, setTemplateToEdit] = useState<MessageTemplate | null>(null);
+  const [templateDeleteId, setTemplateDeleteId] = useState<string | null>(null);
   usePageTitle("Client");
 
   // Analytics date range
@@ -158,6 +170,11 @@ export default function ClientDetailPage({
     date_from: dateFrom,
     date_to:   dateTo,
   });
+
+  const { data: templates = [], isLoading: templatesLoading } = useTemplates(id);
+  const createTemplate = useCreateTemplate(id);
+  const updateTemplate = useUpdateTemplate(id);
+  const deleteTemplate = useDeleteTemplate(id);
 
   const handleExport = async () => {
     setExporting(true);
@@ -216,7 +233,8 @@ export default function ClientDetailPage({
     tabParam === "overview" ||
     tabParam === "leads" ||
     tabParam === "campaigns" ||
-    tabParam === "analytics"
+    tabParam === "analytics" ||
+    tabParam === "templates"
       ? tabParam
       : "overview";
 
@@ -329,6 +347,7 @@ export default function ClientDetailPage({
           <TabsTrigger value="leads">Leads</TabsTrigger>
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
         </TabsList>
 
         {/* ──────────── Overview ──────────── */}
@@ -755,7 +774,182 @@ export default function ClientDetailPage({
             </>
           )}
         </TabsContent>
+        {/* ──────────── Templates ──────────── */}
+        <TabsContent value="templates" className="mt-0 space-y-4">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">Message Templates</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Reusable templates with placeholders — load into any campaign step.
+              </p>
+            </div>
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => { setTemplateToEdit(null); setTemplateDialogOpen(true); }}
+                className={cn(buttonVariants({ variant: "default", size: "sm" }), "gap-2")}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                New Template
+              </button>
+            )}
+          </div>
+
+          {/* Loading */}
+          {templatesLoading && (
+            <div className="space-y-3">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="rounded-xl border border-border bg-card p-4 animate-pulse">
+                  <div className="h-4 w-48 bg-muted rounded mb-2" />
+                  <div className="h-3 w-full bg-muted/60 rounded mb-1" />
+                  <div className="h-3 w-3/4 bg-muted/40 rounded" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!templatesLoading && templates.length === 0 && (
+            <div className="rounded-xl border border-border bg-card p-10 text-center">
+              <LayoutTemplate className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-sm font-medium text-foreground">No templates yet</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Create a template to reuse across campaign steps.
+              </p>
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => { setTemplateToEdit(null); setTemplateDialogOpen(true); }}
+                  className={cn(buttonVariants({ variant: "default", size: "sm" }), "mt-4 gap-2")}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Create First Template
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Template list */}
+          {!templatesLoading && templates.length > 0 && (
+            <div className="space-y-3">
+              {templates.map((tpl) => (
+                <div
+                  key={tpl.id}
+                  className="rounded-xl border border-border bg-card p-4 flex items-start gap-4"
+                >
+                  <div className="h-9 w-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                    <FileText className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{tpl.name}</p>
+                    {tpl.subject && (
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        <span className="font-medium">Subject:</span> {tpl.subject}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{tpl.body}</p>
+                  </div>
+                  {isOwner && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => { setTemplateToEdit(tpl); setTemplateDialogOpen(true); }}
+                        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-8 w-8")}
+                        title="Edit"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTemplateDeleteId(tpl.id)}
+                        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-8 w-8 text-destructive hover:text-destructive")}
+                        title="Delete"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
+
+      {/* ── Template Dialog ── */}
+      {client && (
+        <TemplateDialog
+          open={templateDialogOpen}
+          onClose={() => { setTemplateDialogOpen(false); setTemplateToEdit(null); }}
+          client={{
+            id: client.id,
+            name: client.name,
+            business_type: client.business_type,
+            services: client.services,
+            target_audience: client.target_audience,
+            pitch: client.pitch,
+            tone: client.tone,
+            custom_instructions: client.custom_instructions,
+          }}
+          initial={templateToEdit}
+          isSaving={createTemplate.isPending || updateTemplate.isPending}
+          onSave={async (data) => {
+            try {
+              if (templateToEdit) {
+                await updateTemplate.mutateAsync({ id: templateToEdit.id, payload: data });
+                toast.success("Template updated");
+              } else {
+                await createTemplate.mutateAsync(data);
+                toast.success("Template saved");
+              }
+              setTemplateDialogOpen(false);
+              setTemplateToEdit(null);
+            } catch {
+              toast.error("Failed to save template");
+            }
+          }}
+        />
+      )}
+
+      {/* ── Delete Template Confirmation ── */}
+      {templateDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="rounded-xl border border-border bg-card p-6 w-full max-w-sm shadow-xl">
+            <h2 className="text-sm font-semibold text-foreground mb-2">Delete Template</h2>
+            <p className="text-sm text-muted-foreground mb-5">
+              This template will be permanently deleted. Campaign steps using it will keep their saved message text.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setTemplateDeleteId(null)}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteTemplate.isPending}
+                onClick={async () => {
+                  try {
+                    await deleteTemplate.mutateAsync(templateDeleteId);
+                    toast.success("Template deleted");
+                  } catch {
+                    toast.error("Failed to delete template");
+                  } finally {
+                    setTemplateDeleteId(null);
+                  }
+                }}
+                className={cn(buttonVariants({ variant: "destructive", size: "sm" }), "gap-2")}
+              >
+                {deleteTemplate.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── CSV Import Modal ── */}
       <CsvImportModal

@@ -461,9 +461,10 @@ def _render_template(template: str, lead: Lead) -> str:
     return (
         template
         .replace("{business_name}", lead.business_name or "")
+        .replace("{address}", lead.address or "")
         .replace("{phone}", lead.phone or "")
         .replace("{email}", lead.email or "")
-        .replace("{address}", lead.address or "")
+        .replace("{website}", lead.website or "")
     )
 
 

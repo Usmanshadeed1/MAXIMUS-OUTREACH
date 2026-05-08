@@ -57,3 +57,6 @@ class Client(Base):
     media_files: Mapped[list["MediaFile"]] = relationship(  # noqa: F821
         "MediaFile", back_populates="client", cascade="all, delete-orphan"
     )
+    message_templates: Mapped[list["MessageTemplate"]] = relationship(  # noqa: F821
+        "MessageTemplate", back_populates="client", cascade="all, delete-orphan"
+    )

@@ -32,6 +32,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import type { CampaignStep } from "@/types";
 import type { StepCreatePayload, StepUpdatePayload } from "@/lib/hooks/use-campaigns";
+import { useTemplates } from "@/lib/hooks/use-templates";
 
 // ─── Channel config ───────────────────────────────────────────────────────────
 
@@ -47,8 +48,7 @@ function getChannel(value: string) {
 }
 
 const TEMPLATE_VARS = [
-  "{business_name}", "{address}", "{phone}", "{website}",
-  "{rating}", "{reviews}", "{email}", "{source}",
+  "{business_name}", "{address}", "{phone}", "{email}", "{website}",
 ];
 
 // Sample lead data used for live preview
@@ -308,6 +308,7 @@ export function StepEditor({
 
   const insertVar = (v: string) => setTemplate((t) => t + v);
 
+  const { data: savedTemplates = [] } = useTemplates(clientId ?? "");
   const ch = getChannel(channel);
 
   return (
@@ -424,6 +425,28 @@ export function StepEditor({
                 </button>
               </div>
             </div>
+
+            {/* Load from saved templates */}
+            {savedTemplates.length > 0 && (
+              <div className="mb-3">
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    const tpl = savedTemplates.find((t) => t.id === e.target.value);
+                    if (!tpl) return;
+                    setTemplate(tpl.body);
+                    if (channel === "email" && tpl.subject) setSubject(tpl.subject);
+                    e.target.value = "";
+                  }}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="" disabled>Load from saved template…</option>
+                  {savedTemplates.map((tpl) => (
+                    <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* AI draft panel */}
             {showAiInput && (
