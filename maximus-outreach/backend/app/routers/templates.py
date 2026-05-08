@@ -50,7 +50,7 @@ async def _get_client(client_id: uuid.UUID, user: User, db: AsyncSession):
     client = await client_service.get_client_by_id(client_id, db)
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
-    if not user.is_owner:
+    if user.role != "owner":
         accessible = await client_service.get_accessible_client_ids(user.id, db)
         if client_id not in accessible:
             raise HTTPException(status_code=403, detail="Access denied")

@@ -44,7 +44,7 @@ const VARS = ["{business_name}", "{address}", "{phone}", "{email}", "{website}"]
 
 interface PromptPanelProps {
   client: ClientProfile;
-  onGenerated: (text: string) => void;
+  onGenerated: (subject: string | null, body: string) => void;
 }
 
 function PromptPanel({ client, onGenerated }: PromptPanelProps) {
@@ -54,7 +54,7 @@ function PromptPanel({ client, onGenerated }: PromptPanelProps) {
   // Editable prompt fields
   const [clientContext, setClientContext] = useState(() => buildClientContext(client));
   const [messageInstruction, setMessageInstruction] = useState(
-    "Write a professional cold outreach email under 200 words. Be personalized, not spammy. Use placeholder variables where relevant."
+    "Write a professional cold outreach message under 200 words. Be personalized, not spammy. Use placeholder variables where relevant."
   );
   const [extraInstruction, setExtraInstruction] = useState("");
 
@@ -74,15 +74,27 @@ function PromptPanel({ client, onGenerated }: PromptPanelProps) {
     setGenerating(true);
     try {
       const customInstruction = [messageInstruction, extraInstruction].filter(Boolean).join("\n\n")
-        + "\n\nWrite a reusable template using these exact placeholder tokens where appropriate: "
+        + "\n\nWrite a reusable template using ONLY these exact placeholder tokens where appropriate: "
         + "{business_name}, {address}, {phone}, {email}, {website}. "
-        + "Output ONLY the message text with placeholders. Do NOT fill in real values.";
+        + "Do NOT invent other placeholders like {recipient_name} or {your_name}. "
+        + "Output ONLY the message text with placeholders. Do NOT fill in real values. "
+        + "If writing an email, start with 'Subject: <subject line>' on the first line, then a blank line, then the body.";
 
       const { data } = await api.post<{ template: string }>(
         `/clients/${client.id}/ai/draft-template`,
         { channel: "email", custom_instruction: customInstruction }
       );
-      onGenerated(data.template);
+
+      // Parse subject line if present
+      const lines = data.template.split("\n");
+      let subject: string | null = null;
+      let body = data.template;
+      if (lines[0].toLowerCase().startsWith("subject:")) {
+        subject = lines[0].replace(/^subject:\s*/i, "").trim();
+        body = lines.slice(lines[1] === "" ? 2 : 1).join("\n").trim();
+      }
+
+      onGenerated(subject, body);
       setOpen(false);
       toast.success("Message generated — review and edit before saving");
     } catch (err: unknown) {
@@ -289,7 +301,9 @@ export function TemplateDialog({
             {/* Variable chips */}
             {!showPreview && (
               <div className="mt-2">
-                <p className="text-[10px] text-muted-foreground mb-1.5">Insert variable:</p>
+                <p className="text-[10px] text-muted-foreground mb-1.5">
+                  Insert variable — these get replaced with each lead's real data when a campaign sends:
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {VARS.map((v) => (
                     <button
@@ -308,7 +322,13 @@ export function TemplateDialog({
 
           {/* AI Prompt Panel */}
           {!showPreview && (
-            <PromptPanel client={client} onGenerated={(text) => setBody(text)} />
+            <PromptPanel
+              client={client}
+              onGenerated={(subject, body) => {
+                setBody(body);
+                if (subject) setSubject(subject);
+              }}
+            />
           )}
         </div>
 
