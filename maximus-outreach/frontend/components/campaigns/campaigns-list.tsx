@@ -1,15 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Plus, Zap, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   useCampaigns,
   useStartCampaign,
   usePauseCampaign,
   useResumeCampaign,
+  useDeleteCampaign,
 } from "@/lib/hooks/use-campaigns";
 import { CampaignCard } from "./campaign-card";
 import { toast } from "sonner";
@@ -21,10 +29,12 @@ interface CampaignsListProps {
 
 export function CampaignsList({ clientId, isOwner }: CampaignsListProps) {
   const { data, isLoading } = useCampaigns(clientId);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const startMutation = useStartCampaign(clientId);
   const pauseMutation = usePauseCampaign(clientId);
   const resumeMutation = useResumeCampaign(clientId);
+  const deleteMutation = useDeleteCampaign(clientId);
 
   const pending = startMutation.isPending || pauseMutation.isPending || resumeMutation.isPending;
 
@@ -58,6 +68,25 @@ export function CampaignsList({ clientId, isOwner }: CampaignsListProps) {
           (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
           "Failed to resume campaign"
         ),
+    });
+  };
+
+  const handleDeleteRequest = (id: string) => {
+    const campaign = data?.items.find((c) => c.id === id);
+    if (campaign) setDeleteTarget({ id: campaign.id, name: campaign.name });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteTarget) return;
+    deleteMutation.mutate(deleteTarget.id, {
+      onSuccess: () => {
+        toast.success("Campaign deleted");
+        setDeleteTarget(null);
+      },
+      onError: () => {
+        toast.error("Failed to delete campaign");
+        setDeleteTarget(null);
+      },
     });
   };
 
@@ -125,10 +154,49 @@ export function CampaignsList({ clientId, isOwner }: CampaignsListProps) {
             onStart={isOwner ? handleStart : undefined}
             onPause={isOwner ? handlePause : undefined}
             onResume={isOwner ? handleResume : undefined}
+            onDelete={isOwner ? handleDeleteRequest : undefined}
             isPending={pending}
           />
         ))}
       </div>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent className="max-w-sm border-border bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-foreground">
+              Delete Campaign?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-2 text-sm text-muted-foreground">
+            <p>
+              You are about to permanently delete{" "}
+              <span className="text-foreground font-medium">{deleteTarget?.name}</span>.
+            </p>
+            <p className="text-rose-400 font-medium">
+              This cannot be undone. All steps and enrollments will be lost.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(null)}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={deleteMutation.isPending}
+              onClick={handleDeleteConfirm}
+              className={cn(buttonVariants({ variant: "destructive", size: "sm" }), "gap-2")}
+            >
+              {deleteMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Yes, Delete
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

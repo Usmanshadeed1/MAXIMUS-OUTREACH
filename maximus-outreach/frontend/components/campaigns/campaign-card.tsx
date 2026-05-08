@@ -5,6 +5,7 @@ import {
   Play,
   Pause,
   RotateCcw,
+  Trash2,
   Users,
   Send,
   MessageSquare,
@@ -83,6 +84,7 @@ interface CampaignCardProps {
   onStart?: (id: string) => void;
   onPause?: (id: string) => void;
   onResume?: (id: string) => void;
+  onDelete?: (id: string) => void;
   isPending?: boolean;
 }
 
@@ -93,6 +95,7 @@ export function CampaignCard({
   onStart,
   onPause,
   onResume,
+  onDelete,
   isPending = false,
 }: CampaignCardProps) {
   const sc = STATUS_CONFIG[campaign.status] ?? STATUS_CONFIG.draft;
@@ -187,6 +190,18 @@ export function CampaignCard({
                   >
                     <RotateCcw className="h-3 w-3" />
                     Resume
+                  </button>
+                )}
+                {(campaign.status === "draft" || campaign.status === "paused") && onDelete && (
+                  <button
+                    onClick={() => onDelete(campaign.id)}
+                    title="Delete campaign"
+                    className={cn(
+                      buttonVariants({ variant: "ghost", size: "sm" }),
+                      "h-7 text-xs text-rose-400 hover:text-rose-400 hover:bg-rose-500/10"
+                    )}
+                  >
+                    <Trash2 className="h-3 w-3" />
                   </button>
                 )}
                 <Link

@@ -314,17 +314,9 @@ export function StepEditor({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-xl w-full border-border bg-card p-0 gap-0">
         <DialogHeader className="px-6 py-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-base font-semibold text-foreground">
-              {isEdit ? "Edit Step" : `Add Step ${stepOrder}`}
-            </DialogTitle>
-            <button
-              onClick={onClose}
-              className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-7 w-7 text-muted-foreground")}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+          <DialogTitle className="text-base font-semibold text-foreground">
+            {isEdit ? "Edit Step" : `Add Step ${stepOrder}`}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">

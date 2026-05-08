@@ -177,25 +177,17 @@ async def send_email(
         attachments=attachments,
     )
 
+    use_ssl = smtp.port == 465
     try:
-        if smtp.use_tls or smtp.port == 465:
-            await aiosmtplib.send(
-                msg,
-                hostname=smtp.host,
-                port=smtp.port,
-                username=smtp.username,
-                password=password,
-                use_tls=True,
-            )
-        else:
-            await aiosmtplib.send(
-                msg,
-                hostname=smtp.host,
-                port=smtp.port,
-                username=smtp.username,
-                password=password,
-                start_tls=True,
-            )
+        await aiosmtplib.send(
+            msg,
+            hostname=smtp.host,
+            port=smtp.port,
+            username=smtp.username,
+            password=password,
+            use_tls=use_ssl,
+            start_tls=(not use_ssl and smtp.use_tls),
+        )
     except Exception as exc:
         return {"success": False, "message_id": msg_id, "error": str(exc)}
 
