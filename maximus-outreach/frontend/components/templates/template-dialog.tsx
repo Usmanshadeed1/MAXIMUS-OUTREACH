@@ -60,6 +60,7 @@ function buildDefaultPrompt(c: ClientProfile): string {
   parts.push("Write a professional cold outreach email under 200 words. Be personalized, not spammy.");
   parts.push("Start with 'Subject: <subject line>' on the first line, then a blank line, then the body.");
   parts.push("Only use these placeholders where relevant: {business_name}, {address}, {phone}, {email}, {website}.");
+  parts.push("Do NOT use 'Dear [Recipient]', 'Dear [Name]', or any invented placeholder names. Never use square brackets.");
   parts.push("Output ONLY the message. Do not fill in real values for the placeholders.");
   return parts.join("\n");
 }
