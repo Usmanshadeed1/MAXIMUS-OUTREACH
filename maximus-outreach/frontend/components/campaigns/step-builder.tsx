@@ -14,7 +14,6 @@ import {
   X,
   Eye,
   EyeOff,
-  Sparkles,
   Loader2,
   ImagePlus,
   Film,
@@ -263,35 +262,9 @@ export function StepEditor({
   const [delayDays, setDelayDays] = useState(initial?.delay_days ?? 0);
   const [delayHours, setDelayHours] = useState(initial?.delay_hours ?? 0);
   const [template, setTemplate] = useState(initial?.message_template ?? "");
-  const [aiInstruction, setAiInstruction] = useState("");
   const [subject, setSubject] = useState(initial?.subject_template ?? "");
   const [media, setMedia] = useState<UploadedMedia[]>([]);
   const [showPreview, setShowPreview] = useState(false);
-  const [generatingAI, setGeneratingAI] = useState(false);
-  const [showAiInput, setShowAiInput] = useState(false);
-
-  const handleGenerateTemplate = async () => {
-    if (!clientId) {
-      toast.error("No client context — cannot generate template");
-      return;
-    }
-    setGeneratingAI(true);
-    try {
-      const { data } = await api.post<{ template: string }>(
-        `/clients/${clientId}/ai/draft-template`,
-        { channel, custom_instruction: aiInstruction || null }
-      );
-      setTemplate(data.template);
-      setShowPreview(false);
-      setShowAiInput(false);
-      toast.success("Template drafted — review and edit before saving");
-    } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      toast.error(detail ?? "AI generation failed — check AI keys in Settings");
-    } finally {
-      setGeneratingAI(false);
-    }
-  };
 
   const handleSave = () => {
     const payload: StepCreatePayload = {
@@ -398,32 +371,22 @@ export function StepEditor({
             </div>
           )}
 
-          {/* Message template */}
+          {/* Message */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs font-medium text-muted-foreground">
-                Message Template
+                Message
               </label>
-              <div className="flex items-center gap-2">
-                {template && (
-                  <button
-                    type="button"
-                    onClick={() => setShowPreview((p) => !p)}
-                    className="flex items-center gap-1 text-[11px] text-primary hover:underline"
-                  >
-                    {showPreview ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                    {showPreview ? "Edit" : "Preview"}
-                  </button>
-                )}
+              {template && (
                 <button
                   type="button"
-                  onClick={() => setShowAiInput((v) => !v)}
+                  onClick={() => setShowPreview((p) => !p)}
                   className="flex items-center gap-1 text-[11px] text-primary hover:underline"
                 >
-                  <Sparkles className="h-3 w-3" />
-                  Generate with AI
+                  {showPreview ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                  {showPreview ? "Edit" : "Preview"}
                 </button>
-              </div>
+              )}
             </div>
 
             {/* Load from saved templates */}
@@ -445,36 +408,6 @@ export function StepEditor({
                     <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
                   ))}
                 </select>
-              </div>
-            )}
-
-            {/* AI draft panel */}
-            {showAiInput && (
-              <div className="mb-3 rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
-                <p className="text-[11px] text-muted-foreground">
-                  AI will draft a template using this client's profile. You can edit it before saving.
-                </p>
-                <input
-                  type="text"
-                  value={aiInstruction}
-                  onChange={(e) => setAiInstruction(e.target.value)}
-                  placeholder="Optional: e.g. keep it under 80 words, mention kitchen remodeling"
-                  className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-                <button
-                  type="button"
-                  onClick={handleGenerateTemplate}
-                  disabled={generatingAI}
-                  className={cn(
-                    buttonVariants({ variant: "outline", size: "sm" }),
-                    "gap-2 border-primary/40 text-primary hover:bg-primary/10 w-full justify-center"
-                  )}
-                >
-                  {generatingAI
-                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    : <Sparkles className="h-3.5 w-3.5" />}
-                  {generatingAI ? "Generating…" : "Draft Template"}
-                </button>
               </div>
             )}
 

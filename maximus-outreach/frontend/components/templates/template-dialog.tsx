@@ -47,42 +47,34 @@ interface PromptPanelProps {
   onGenerated: (subject: string | null, body: string) => void;
 }
 
+function buildDefaultPrompt(c: ClientProfile): string {
+  const parts: string[] = [];
+  parts.push(`You are an expert outreach copywriter working for "${c.name}".`);
+  if (c.business_type) parts.push(`Business type: ${c.business_type}.`);
+  if (c.services) parts.push(`Services offered: ${c.services}.`);
+  if (c.target_audience) parts.push(`Target audience: ${c.target_audience}.`);
+  if (c.pitch) parts.push(`Value proposition: ${c.pitch}.`);
+  if (c.tone) parts.push(`Tone: ${c.tone}.`);
+  if (c.custom_instructions) parts.push(`Additional instructions: ${c.custom_instructions}.`);
+  parts.push("");
+  parts.push("Write a professional cold outreach email under 200 words. Be personalized, not spammy.");
+  parts.push("Start with 'Subject: <subject line>' on the first line, then a blank line, then the body.");
+  parts.push("Only use these placeholders where relevant: {business_name}, {address}, {phone}, {email}, {website}.");
+  parts.push("Output ONLY the message. Do not fill in real values for the placeholders.");
+  return parts.join("\n");
+}
+
 function PromptPanel({ client, onGenerated }: PromptPanelProps) {
   const [open, setOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
-
-  // Editable prompt fields
-  const [clientContext, setClientContext] = useState(() => buildClientContext(client));
-  const [messageInstruction, setMessageInstruction] = useState(
-    "Write a professional cold outreach message under 200 words. Be personalized, not spammy. Use placeholder variables where relevant."
-  );
-  const [extraInstruction, setExtraInstruction] = useState("");
-
-  function buildClientContext(c: ClientProfile): string {
-    const parts: string[] = [];
-    parts.push(`You are an expert outreach copywriter working for "${c.name}".`);
-    if (c.business_type) parts.push(`Business type: ${c.business_type}.`);
-    if (c.services) parts.push(`Services offered: ${c.services}.`);
-    if (c.target_audience) parts.push(`Target audience: ${c.target_audience}.`);
-    if (c.pitch) parts.push(`Value proposition: ${c.pitch}.`);
-    if (c.tone) parts.push(`Tone: ${c.tone}.`);
-    if (c.custom_instructions) parts.push(`Additional instructions: ${c.custom_instructions}`);
-    return parts.join("\n");
-  }
+  const [finalPrompt, setFinalPrompt] = useState(() => buildDefaultPrompt(client));
 
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      const customInstruction = [messageInstruction, extraInstruction].filter(Boolean).join("\n\n")
-        + "\n\nWrite a reusable template using ONLY these exact placeholder tokens where appropriate: "
-        + "{business_name}, {address}, {phone}, {email}, {website}. "
-        + "Do NOT invent other placeholders like {recipient_name} or {your_name}. "
-        + "Output ONLY the message text with placeholders. Do NOT fill in real values. "
-        + "If writing an email, start with 'Subject: <subject line>' on the first line, then a blank line, then the body.";
-
       const { data } = await api.post<{ template: string }>(
         `/clients/${client.id}/ai/draft-template`,
-        { channel: "email", custom_instruction: customInstruction }
+        { channel: "email", custom_instruction: finalPrompt }
       );
 
       // Parse subject line if present
@@ -122,50 +114,29 @@ function PromptPanel({ client, onGenerated }: PromptPanelProps) {
 
       {open && (
         <div className="px-4 pb-4 space-y-4 border-t border-primary/20 pt-4">
-          {/* Client context */}
+          {/* Final prompt — fully editable */}
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-              Client Context
-              <span className="ml-1.5 text-muted-foreground/60 font-normal">
-                (auto-filled from client profile — edit if needed)
-              </span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-medium text-muted-foreground">
+                Prompt sent to AI
+              </label>
+              <button
+                type="button"
+                onClick={() => setFinalPrompt(buildDefaultPrompt(client))}
+                className="text-[11px] text-muted-foreground hover:text-primary hover:underline"
+              >
+                Reset to default
+              </button>
+            </div>
             <textarea
-              rows={5}
-              value={clientContext}
-              onChange={(e) => setClientContext(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none font-mono"
+              rows={12}
+              value={finalPrompt}
+              onChange={(e) => setFinalPrompt(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-y font-mono leading-relaxed"
             />
-          </div>
-
-          {/* Message instruction */}
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-              Message Instruction
-              <span className="ml-1.5 text-muted-foreground/60 font-normal">
-                (what the AI should write)
-              </span>
-            </label>
-            <textarea
-              rows={3}
-              value={messageInstruction}
-              onChange={(e) => setMessageInstruction(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-            />
-          </div>
-
-          {/* Extra instruction */}
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-              Extra Instruction <span className="text-muted-foreground/60 font-normal">(optional)</span>
-            </label>
-            <input
-              type="text"
-              value={extraInstruction}
-              onChange={(e) => setExtraInstruction(e.target.value)}
-              placeholder="e.g. keep it under 80 words, always mention free estimate"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            />
+            <p className="text-[10px] text-muted-foreground mt-1">
+              This is the exact prompt sent to AI. Edit anything — client context, instructions, variables, format.
+            </p>
           </div>
 
           <button
