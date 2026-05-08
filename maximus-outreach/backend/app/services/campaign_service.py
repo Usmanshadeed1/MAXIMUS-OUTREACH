@@ -411,11 +411,12 @@ async def execute_campaign(campaign_id: uuid.UUID, db: AsyncSession) -> int:
 
             created += 1
 
-        # Mark completed only when every step reached a terminal outcome.
-        # Prevents "completed" while logs are still queued/pending.
+        # Mark completed only when every step reached a terminal outcome
+        # AND at least one step was actually sent (not all failed).
         from datetime import timedelta as td
         terminal_statuses = {"sent", "skipped", "failed"}
         all_steps_terminal = True
+        any_sent = False
         for step in steps:
             step_due = ref_time + td(days=step.delay_days, hours=step.delay_hours)
             if now < step_due:
@@ -429,8 +430,10 @@ async def execute_campaign(campaign_id: uuid.UUID, db: AsyncSession) -> int:
             if not statuses.intersection(terminal_statuses):
                 all_steps_terminal = False
                 break
+            if "sent" in statuses:
+                any_sent = True
 
-        if all_steps_terminal:
+        if all_steps_terminal and any_sent:
             enrollment.status = "completed"
             enrollment.completed_at = now
 

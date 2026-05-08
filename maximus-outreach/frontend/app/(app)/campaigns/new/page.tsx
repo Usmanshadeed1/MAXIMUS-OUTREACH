@@ -7,6 +7,7 @@ import { ChevronLeft, Loader2 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCreateCampaign } from "@/lib/hooks/use-campaigns";
+import { useClient } from "@/lib/hooks/use-clients";
 import { PacingConfig, type PacingConfigValue } from "@/components/campaigns/pacing-config";
 import { toast } from "sonner";
 import { usePageTitle } from "@/lib/hooks/use-page-title";
@@ -53,6 +54,7 @@ export default function NewCampaignPage() {
   const [pacing, setPacing] = useState<PacingConfigValue>(DEFAULT_PACING);
 
   const createMutation = useCreateCampaign(clientId);
+  const { data: client } = useClient(clientId);
   const isRepeatDelayApplicable = maxAttempts > 1;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -103,7 +105,9 @@ export default function NewCampaignPage() {
           <ChevronLeft className="h-4 w-4" />
           Back to Client
         </Link>
-        <h1 className="text-2xl font-bold text-foreground">New Campaign</h1>
+        <h1 className="text-2xl font-bold text-foreground">
+          New Campaign{client ? ` for ${client.name}` : ""}
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">Configure your outreach campaign settings.</p>
       </div>
 

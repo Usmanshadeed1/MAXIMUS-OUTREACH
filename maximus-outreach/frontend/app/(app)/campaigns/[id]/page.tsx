@@ -165,7 +165,7 @@ function LogRow({ log }: { log: OutreachLogEntry }) {
         <td className="px-4 py-3">
           <span className={cn("inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium capitalize", statusStyle)}>
             <StatusIcon className="h-3 w-3" />
-            {log.status}
+            {log.channel === "social_dm" && log.status === "skipped" ? "Manual queue" : log.status}
           </span>
         </td>
         {/* Sent at */}
@@ -739,7 +739,7 @@ export default function CampaignDetailPage() {
         <TabsList className="border-b border-border bg-transparent rounded-none gap-1 px-0 h-auto pb-0 mb-5 w-full overflow-x-auto flex-nowrap">
           {[
             { value: "steps", label: "Steps", icon: Settings2 },
-            { value: "enroll", label: "Enroll Leads", icon: Users },
+            { value: "enroll", label: "Assign Leads", icon: Users },
             { value: "pacing", label: "Pacing", icon: ListFilter },
             { value: "logs", label: "Logs", icon: ScrollText },
             { value: "overview", label: "Overview", icon: Settings2 },
@@ -815,46 +815,58 @@ export default function CampaignDetailPage() {
               Start Campaign?
             </DialogTitle>
           </DialogHeader>
-          <div className="py-2 space-y-2 text-sm text-muted-foreground">
-            <p>
-              You are about to start{" "}
-              <span className="text-foreground font-medium">{campaign.name}</span>.
-            </p>
-            <p>
-              {campaign.total_enrolled > 0
-                ? `${campaign.total_enrolled.toLocaleString()} enrolled leads will begin receiving messages according to the pacing schedule.`
-                : "No leads are enrolled yet. Enroll leads first, then start the campaign."}
-            </p>
-            {(campaign.steps?.length ?? 0) === 0 && (
-              <p className="text-amber-400">Warning: This campaign has no steps defined.</p>
-            )}
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => setConfirmStartOpen(false)}
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={startMutation.isPending}
-              onClick={() => {
-                startMutation.mutate(campaign.id, {
-                  onSuccess: () => {
-                    toast.success("Campaign started");
-                    setConfirmStartOpen(false);
-                  },
-                  onError: () => toast.error("Failed to start campaign"),
-                });
-              }}
-              className={cn(buttonVariants({ variant: "default", size: "sm" }), "gap-2")}
-            >
-              {startMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Confirm & Start
-            </button>
-          </div>
+          {(() => {
+            const noSteps = (campaign.steps?.length ?? 0) === 0;
+            const noLeads = campaign.total_enrolled === 0;
+            const blocked = noSteps || noLeads;
+            return (
+              <>
+                <div className="py-2 space-y-2 text-sm text-muted-foreground">
+                  {noSteps && (
+                    <p className="text-rose-400 font-medium">No steps defined. Add at least one step before starting.</p>
+                  )}
+                  {noLeads && (
+                    <p className="text-rose-400 font-medium">No leads assigned. Assign leads before starting.</p>
+                  )}
+                  {!blocked && (
+                    <p>
+                      You are about to start{" "}
+                      <span className="text-foreground font-medium">{campaign.name}</span>.{" "}
+                      {campaign.total_enrolled.toLocaleString()} leads will begin receiving messages.
+                    </p>
+                  )}
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmStartOpen(false)}
+                    className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                  >
+                    {blocked ? "Close" : "Cancel"}
+                  </button>
+                  {!blocked && (
+                    <button
+                      type="button"
+                      disabled={startMutation.isPending}
+                      onClick={() => {
+                        startMutation.mutate(campaign.id, {
+                          onSuccess: () => {
+                            toast.success("Campaign started");
+                            setConfirmStartOpen(false);
+                          },
+                          onError: () => toast.error("Failed to start campaign"),
+                        });
+                      }}
+                      className={cn(buttonVariants({ variant: "default", size: "sm" }), "gap-2")}
+                    >
+                      {startMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      Confirm & Start
+                    </button>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
