@@ -2,14 +2,14 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
-from app.services import template_service
+from app.services import ai_service, template_service
 
 router = APIRouter(prefix="/templates", tags=["Global Templates"])
 
@@ -45,6 +45,19 @@ class TemplateResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
+@router.post("/ai/draft")
+async def draft_global_template(
+    prompt: str = Body(..., embed=True),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        text = await ai_service.draft_template_generic(prompt, db)
+        return {"template": text}
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+
 
 @router.get("", response_model=list[TemplateResponse])
 async def list_global_templates(

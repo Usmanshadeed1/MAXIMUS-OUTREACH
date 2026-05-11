@@ -328,6 +328,31 @@ async def draft_template(
     raise RuntimeError(f"All AI keys failed. Last error: {last_error}")
 
 
+async def draft_template_generic(prompt: str, db: AsyncSession) -> str:
+    """Generate a global template using the full prompt directly — no client profile."""
+    keys = await _get_usable_keys(db)
+    if not keys:
+        raise RuntimeError("No usable AI keys available. Add keys via Settings → AI Keys.")
+
+    last_error = None
+    for key in keys:
+        try:
+            text = await _call_llm(key, "You are an expert outreach copywriter.", prompt)
+            await _increment_counter(key, db)
+            return text
+        except RuntimeError as e:
+            last_error = str(e)
+            if str(e).startswith("auth_error"):
+                await _mark_error(key, last_error, db)
+            continue
+        except Exception as e:
+            last_error = str(e)[:300]
+            await _mark_error(key, last_error, db)
+            continue
+
+    raise RuntimeError(f"All AI keys failed. Last error: {last_error}")
+
+
 async def generate_reply_draft(
     client,
     lead,

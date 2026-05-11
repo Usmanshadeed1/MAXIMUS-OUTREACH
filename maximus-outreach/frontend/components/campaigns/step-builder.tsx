@@ -18,7 +18,6 @@ import {
   ImagePlus,
   Film,
   FileText,
-  Sparkles,
 } from "lucide-react";
 import {
   Dialog,
@@ -32,8 +31,9 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import type { CampaignStep } from "@/types";
 import type { StepCreatePayload, StepUpdatePayload } from "@/lib/hooks/use-campaigns";
-import { useTemplates, useGlobalTemplates, useCreateTemplate, useCreateGlobalTemplate } from "@/lib/hooks/use-templates";
-import { TemplateDialog } from "@/components/templates/template-dialog";
+import { useTemplates, useGlobalTemplates } from "@/lib/hooks/use-templates";
+import { PromptPanel } from "@/components/templates/template-dialog";
+import { useClient } from "@/lib/hooks/use-clients";
 
 // ─── Channel config ───────────────────────────────────────────────────────────
 
@@ -285,9 +285,7 @@ export function StepEditor({
 
   const { data: savedTemplates = [] } = useTemplates(clientId ?? "");
   const { data: globalTemplates = [] } = useGlobalTemplates();
-  const createClientTpl = useCreateTemplate(clientId ?? "");
-  const createGlobalTpl = useCreateGlobalTemplate();
-  const [newTplOpen, setNewTplOpen] = useState(false);
+  const { data: clientData } = useClient(clientId ?? null);
   const ch = getChannel(channel);
 
   return (
@@ -395,9 +393,9 @@ export function StepEditor({
               )}
             </div>
 
-            {/* Load from / create templates */}
-            <div className="flex gap-2 mb-3">
-              {(savedTemplates.length > 0 || globalTemplates.length > 0) && (
+            {/* Load from saved templates */}
+            {(savedTemplates.length > 0 || globalTemplates.length > 0) && (
+              <div className="mb-3">
                 <select
                   defaultValue=""
                   onChange={(e) => {
@@ -408,7 +406,7 @@ export function StepEditor({
                     if (channel === "email" && tpl.subject) setSubject(tpl.subject);
                     e.target.value = "";
                   }}
-                  className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                 >
                   <option value="" disabled>Load from template…</option>
                   {savedTemplates.length > 0 && (
@@ -426,20 +424,8 @@ export function StepEditor({
                     </optgroup>
                   )}
                 </select>
-              )}
-              <button
-                type="button"
-                onClick={() => setNewTplOpen(true)}
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "sm" }),
-                  "gap-1.5 shrink-0",
-                  savedTemplates.length === 0 && globalTemplates.length === 0 && "w-full justify-center"
-                )}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                {savedTemplates.length === 0 && globalTemplates.length === 0 ? "Create from Template" : "New Template"}
-              </button>
-            </div>
+              </div>
+            )}
 
             {showPreview ? (
               <div className="rounded-md border border-border bg-muted/20 px-4 py-3 text-sm text-foreground whitespace-pre-wrap min-h-[120px]">
@@ -478,6 +464,17 @@ export function StepEditor({
             )}
           </div>
 
+          {/* AI Generate — uses this client's profile */}
+          {!showPreview && (
+            <PromptPanel
+              client={clientData ?? null}
+              onGenerated={(s, b) => {
+                setTemplate(b);
+                if (s) setSubject(s);
+              }}
+            />
+          )}
+
           {/* Media upload — for WhatsApp, email, social_dm */}
           {["whatsapp", "email", "social_dm"].includes(channel) && (
             <MediaUploader clientId={clientId} media={media} onChange={setMedia} />
@@ -504,43 +501,6 @@ export function StepEditor({
           </button>
         </div>
       </DialogContent>
-
-      {/* New Template dialog — step mode with three save actions */}
-      <TemplateDialog
-        open={newTplOpen}
-        onClose={() => setNewTplOpen(false)}
-        client={null}
-        mode="step"
-        isSavingClient={createClientTpl.isPending}
-        isSavingGlobal={createGlobalTpl.isPending}
-        onUse={(data) => {
-          setTemplate(data.body);
-          if (channel === "email" && data.subject) setSubject(data.subject);
-          setNewTplOpen(false);
-        }}
-        onSaveAsClient={clientId ? async (data) => {
-          try {
-            await createClientTpl.mutateAsync(data);
-            toast.success("Saved as client template");
-            setTemplate(data.body);
-            if (channel === "email" && data.subject) setSubject(data.subject);
-            setNewTplOpen(false);
-          } catch {
-            toast.error("Failed to save template");
-          }
-        } : undefined}
-        onSaveAsGlobal={async (data) => {
-          try {
-            await createGlobalTpl.mutateAsync(data);
-            toast.success("Saved as global template");
-            setTemplate(data.body);
-            if (channel === "email" && data.subject) setSubject(data.subject);
-            setNewTplOpen(false);
-          } catch {
-            toast.error("Failed to save template");
-          }
-        }}
-      />
     </Dialog>
   );
 }

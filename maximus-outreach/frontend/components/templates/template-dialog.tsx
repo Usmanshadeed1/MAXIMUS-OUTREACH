@@ -84,7 +84,7 @@ function buildBlankPrompt(): string {
   ].join("\n");
 }
 
-function PromptPanel({ client, onGenerated }: PromptPanelProps) {
+export function PromptPanel({ client, onGenerated }: PromptPanelProps) {
   const [open, setOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const defaultPrompt = client ? buildDefaultPrompt(client) : buildBlankPrompt();
@@ -96,16 +96,14 @@ function PromptPanel({ client, onGenerated }: PromptPanelProps) {
   }, [client?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGenerate = async () => {
-    if (!client) {
-      toast.error("No client selected — AI generation requires a client");
-      return;
-    }
     setGenerating(true);
     try {
-      const { data } = await api.post<{ template: string }>(
-        `/clients/${client.id}/ai/draft-template`,
-        { channel: "email", custom_instruction: finalPrompt }
-      );
+      const { data } = await (client
+        ? api.post<{ template: string }>(`/clients/${client.id}/ai/draft-template`, {
+            channel: "email",
+            custom_instruction: finalPrompt,
+          })
+        : api.post<{ template: string }>("/templates/ai/draft", { prompt: finalPrompt }));
       const lines = data.template.split("\n");
       let subject: string | null = null;
       let body = data.template;
@@ -140,11 +138,6 @@ function PromptPanel({ client, onGenerated }: PromptPanelProps) {
 
       {open && (
         <div className="px-4 pb-4 space-y-4 border-t border-primary/20 pt-4">
-          {!client && (
-            <p className="text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-3 py-2">
-              AI generation uses a client's profile and API keys. This template has no client — edit the prompt below manually and click Generate, or link this to a client context.
-            </p>
-          )}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs font-medium text-muted-foreground">
@@ -172,7 +165,7 @@ function PromptPanel({ client, onGenerated }: PromptPanelProps) {
           <button
             type="button"
             onClick={handleGenerate}
-            disabled={generating || !client}
+            disabled={generating}
             className={cn(
               buttonVariants({ variant: "default", size: "sm" }),
               "w-full justify-center gap-2"
