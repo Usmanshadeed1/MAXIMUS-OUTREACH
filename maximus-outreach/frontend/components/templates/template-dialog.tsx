@@ -323,7 +323,7 @@ export function TemplateDialog({
             )}
           </div>
 
-          {!showPreview && (
+          {!showPreview && client && (
             <PromptPanel
               client={client}
               onGenerated={(s, b) => {
