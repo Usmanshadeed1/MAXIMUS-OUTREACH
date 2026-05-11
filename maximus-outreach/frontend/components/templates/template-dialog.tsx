@@ -45,10 +45,6 @@ interface TemplateDialogProps {
   isSavingGlobal?: boolean;
 }
 
-// ─── Variable chips ───────────────────────────────────────────────────────────
-
-const VARS = ["{business_name}", "{address}", "{phone}", "{email}", "{website}"];
-
 // ─── Prompt Panel ─────────────────────────────────────────────────────────────
 
 interface PromptPanelProps {
@@ -66,11 +62,10 @@ function buildDefaultPrompt(c: ClientProfile): string {
   if (c.tone) parts.push(`Tone: ${c.tone}.`);
   if (c.custom_instructions) parts.push(`Additional instructions: ${c.custom_instructions}.`);
   parts.push("");
-  parts.push("Write a professional cold outreach email under 200 words. Be personalized, not spammy.");
+  parts.push("Write a professional cold outreach message under 200 words. Be personalized, not spammy.");
   parts.push("Start with 'Subject: <subject line>' on the first line, then a blank line, then the body.");
-  parts.push("Only use these placeholders where relevant: {business_name}, {address}, {phone}, {email}, {website}.");
-  parts.push("Do NOT use 'Dear [Recipient]', 'Dear [Name]', or any invented placeholder names. Never use square brackets.");
-  parts.push("Output ONLY the message. Do not fill in real values for the placeholders.");
+  parts.push("Do NOT address the recipient by any name or placeholder. Do not use 'Dear [Name]' or any square brackets.");
+  parts.push("Output ONLY the message text. Do not include any notes or commentary.");
   return parts.join("\n");
 }
 
@@ -78,9 +73,8 @@ function buildBlankPrompt(): string {
   return [
     "Write a professional cold outreach email under 200 words.",
     "Start with 'Subject: <subject line>' on the first line, then a blank line, then the body.",
-    "Only use these placeholders where relevant: {business_name}, {address}, {phone}, {email}, {website}.",
-    "Do NOT use 'Dear [Recipient]', 'Dear [Name]', or any invented placeholder names. Never use square brackets.",
-    "Output ONLY the message. Do not fill in real values for the placeholders.",
+    "Do NOT address the recipient by any name or placeholder. Do not use square brackets.",
+    "Output ONLY the message text. Do not include any notes or commentary.",
   ].join("\n");
 }
 
@@ -210,8 +204,6 @@ export function TemplateDialog({
     }
   }, [open, initial]);
 
-  const insertVar = (v: string) => setBody((b) => b + v);
-
   const previewBody = body
     .replace("{business_name}", "Johnson's Kitchen Co.")
     .replace("{address}", "123 Main St, New York")
@@ -302,25 +294,6 @@ export function TemplateDialog({
               />
             )}
 
-            {!showPreview && (
-              <div className="mt-2">
-                <p className="text-[10px] text-muted-foreground mb-1.5">
-                  Insert variable — replaced with each lead's real data when a campaign sends:
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {VARS.map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => insertVar(v)}
-                      className="rounded border border-border bg-muted/30 px-2 py-0.5 text-[11px] text-foreground hover:bg-primary/10 hover:border-primary/40 transition-colors"
-                    >
-                      {v}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {!showPreview && client && (
