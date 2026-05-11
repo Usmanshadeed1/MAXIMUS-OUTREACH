@@ -304,9 +304,9 @@ async def draft_template(
 
     user_prompt = (
         f"{channel_rule}{extra}\n\n"
-        f"Write a reusable template using these exact placeholder tokens where appropriate: "
-        f"{{business_name}}, {{address}}, {{phone}}, {{email}}, {{website}}. "
-        f"Output ONLY the message text with placeholders. Do NOT fill in real values."
+        f"Do NOT address the recipient by any name or use placeholders like [Name] or square brackets. "
+        f"Do not add a signature with a person's name. "
+        f"Output ONLY the message text."
     )
 
     last_error = None
