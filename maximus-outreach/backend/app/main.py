@@ -12,6 +12,7 @@ from app.routers import conversations
 from app.routers import analytics
 from app.routers import media
 from app.routers import templates
+from app.routers import global_templates
 
 app = FastAPI(
     title="Maximus Outreach API",
@@ -49,3 +50,4 @@ app.include_router(conversations.router)
 app.include_router(analytics.router)
 app.include_router(media.router)
 app.include_router(templates.router)
+app.include_router(global_templates.router)

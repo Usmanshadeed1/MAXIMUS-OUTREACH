@@ -18,6 +18,7 @@ import {
   ImagePlus,
   Film,
   FileText,
+  Sparkles,
 } from "lucide-react";
 import {
   Dialog,
@@ -31,7 +32,8 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import type { CampaignStep } from "@/types";
 import type { StepCreatePayload, StepUpdatePayload } from "@/lib/hooks/use-campaigns";
-import { useTemplates } from "@/lib/hooks/use-templates";
+import { useTemplates, useGlobalTemplates, useCreateTemplate, useCreateGlobalTemplate } from "@/lib/hooks/use-templates";
+import { TemplateDialog } from "@/components/templates/template-dialog";
 
 // ─── Channel config ───────────────────────────────────────────────────────────
 
@@ -282,6 +284,10 @@ export function StepEditor({
   const insertVar = (v: string) => setTemplate((t) => t + v);
 
   const { data: savedTemplates = [] } = useTemplates(clientId ?? "");
+  const { data: globalTemplates = [] } = useGlobalTemplates();
+  const createClientTpl = useCreateTemplate(clientId ?? "");
+  const createGlobalTpl = useCreateGlobalTemplate();
+  const [newTplOpen, setNewTplOpen] = useState(false);
   const ch = getChannel(channel);
 
   return (
@@ -389,27 +395,51 @@ export function StepEditor({
               )}
             </div>
 
-            {/* Load from saved templates */}
-            {savedTemplates.length > 0 && (
-              <div className="mb-3">
+            {/* Load from / create templates */}
+            <div className="flex gap-2 mb-3">
+              {(savedTemplates.length > 0 || globalTemplates.length > 0) && (
                 <select
                   defaultValue=""
                   onChange={(e) => {
-                    const tpl = savedTemplates.find((t) => t.id === e.target.value);
+                    const all = [...savedTemplates, ...globalTemplates];
+                    const tpl = all.find((t) => t.id === e.target.value);
                     if (!tpl) return;
                     setTemplate(tpl.body);
                     if (channel === "email" && tpl.subject) setSubject(tpl.subject);
                     e.target.value = "";
                   }}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                 >
-                  <option value="" disabled>Load from saved template…</option>
-                  {savedTemplates.map((tpl) => (
-                    <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
-                  ))}
+                  <option value="" disabled>Load from template…</option>
+                  {savedTemplates.length > 0 && (
+                    <optgroup label="Client Templates">
+                      {savedTemplates.map((tpl) => (
+                        <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {globalTemplates.length > 0 && (
+                    <optgroup label="Global Templates">
+                      {globalTemplates.map((tpl) => (
+                        <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
-              </div>
-            )}
+              )}
+              <button
+                type="button"
+                onClick={() => setNewTplOpen(true)}
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" }),
+                  "gap-1.5 shrink-0",
+                  savedTemplates.length === 0 && globalTemplates.length === 0 && "w-full justify-center"
+                )}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {savedTemplates.length === 0 && globalTemplates.length === 0 ? "Create from Template" : "New Template"}
+              </button>
+            </div>
 
             {showPreview ? (
               <div className="rounded-md border border-border bg-muted/20 px-4 py-3 text-sm text-foreground whitespace-pre-wrap min-h-[120px]">
@@ -474,6 +504,43 @@ export function StepEditor({
           </button>
         </div>
       </DialogContent>
+
+      {/* New Template dialog — step mode with three save actions */}
+      <TemplateDialog
+        open={newTplOpen}
+        onClose={() => setNewTplOpen(false)}
+        client={null}
+        mode="step"
+        isSavingClient={createClientTpl.isPending}
+        isSavingGlobal={createGlobalTpl.isPending}
+        onUse={(data) => {
+          setTemplate(data.body);
+          if (channel === "email" && data.subject) setSubject(data.subject);
+          setNewTplOpen(false);
+        }}
+        onSaveAsClient={clientId ? async (data) => {
+          try {
+            await createClientTpl.mutateAsync(data);
+            toast.success("Saved as client template");
+            setTemplate(data.body);
+            if (channel === "email" && data.subject) setSubject(data.subject);
+            setNewTplOpen(false);
+          } catch {
+            toast.error("Failed to save template");
+          }
+        } : undefined}
+        onSaveAsGlobal={async (data) => {
+          try {
+            await createGlobalTpl.mutateAsync(data);
+            toast.success("Saved as global template");
+            setTemplate(data.body);
+            if (channel === "email" && data.subject) setSubject(data.subject);
+            setNewTplOpen(false);
+          } catch {
+            toast.error("Failed to save template");
+          }
+        }}
+      />
     </Dialog>
   );
 }
@@ -533,29 +600,15 @@ export function StepCard({
               <span className="text-[11px] text-muted-foreground">Step {step.step_order}</span>
               <span className="text-[11px] text-muted-foreground">·</span>
               <span className="text-[11px] text-muted-foreground">{delayText}</span>
-              {step.use_ai_generation && (
-                <>
-                  <span className="text-[11px] text-muted-foreground">·</span>
-                  <span className="inline-flex items-center gap-1 text-[11px] text-primary">
-                    <Sparkles className="h-3 w-3" />
-                    AI
-                  </span>
-                </>
-              )}
             </div>
             {step.subject_template && (
               <p className="text-xs text-foreground mt-0.5 font-medium truncate">
                 Subject: {step.subject_template}
               </p>
             )}
-            {!step.use_ai_generation && step.message_template && (
+            {step.message_template && (
               <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                 {step.message_template}
-              </p>
-            )}
-            {step.use_ai_generation && step.ai_prompt_override && (
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-1 italic">
-                Override: {step.ai_prompt_override}
               </p>
             )}
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Sparkles, Loader2, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
+import { Sparkles, Loader2, ChevronDown, ChevronUp, Eye, EyeOff, Globe, BookmarkPlus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,7 @@ import type { MessageTemplate } from "@/lib/hooks/use-templates";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ClientProfile {
+export interface ClientProfile {
   id: string;
   name: string;
   business_type?: string | null;
@@ -30,20 +30,29 @@ interface ClientProfile {
 interface TemplateDialogProps {
   open: boolean;
   onClose: () => void;
-  client: ClientProfile;
+  // client is optional — when absent (global template), AI panel shows manual prompt only
+  client?: ClientProfile | null;
   initial?: MessageTemplate | null;
-  onSave: (data: { name: string; subject: string | null; body: string }) => void;
+  // library mode: single Save button
+  onSave?: (data: { name: string; subject: string | null; body: string }) => void;
   isSaving?: boolean;
+  // step mode: three action buttons
+  mode?: "library" | "step";
+  onUse?: (data: { name: string; subject: string | null; body: string }) => void;
+  onSaveAsClient?: (data: { name: string; subject: string | null; body: string }) => void;
+  onSaveAsGlobal?: (data: { name: string; subject: string | null; body: string }) => void;
+  isSavingClient?: boolean;
+  isSavingGlobal?: boolean;
 }
 
 // ─── Variable chips ───────────────────────────────────────────────────────────
 
 const VARS = ["{business_name}", "{address}", "{phone}", "{email}", "{website}"];
 
-// ─── Prompt Preview Panel ─────────────────────────────────────────────────────
+// ─── Prompt Panel ─────────────────────────────────────────────────────────────
 
 interface PromptPanelProps {
-  client: ClientProfile;
+  client?: ClientProfile | null;
   onGenerated: (subject: string | null, body: string) => void;
 }
 
@@ -65,20 +74,38 @@ function buildDefaultPrompt(c: ClientProfile): string {
   return parts.join("\n");
 }
 
+function buildBlankPrompt(): string {
+  return [
+    "Write a professional cold outreach email under 200 words.",
+    "Start with 'Subject: <subject line>' on the first line, then a blank line, then the body.",
+    "Only use these placeholders where relevant: {business_name}, {address}, {phone}, {email}, {website}.",
+    "Do NOT use 'Dear [Recipient]', 'Dear [Name]', or any invented placeholder names. Never use square brackets.",
+    "Output ONLY the message. Do not fill in real values for the placeholders.",
+  ].join("\n");
+}
+
 function PromptPanel({ client, onGenerated }: PromptPanelProps) {
   const [open, setOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [finalPrompt, setFinalPrompt] = useState(() => buildDefaultPrompt(client));
+  const defaultPrompt = client ? buildDefaultPrompt(client) : buildBlankPrompt();
+  const [finalPrompt, setFinalPrompt] = useState(defaultPrompt);
+
+  // Reset prompt when client changes
+  useEffect(() => {
+    setFinalPrompt(client ? buildDefaultPrompt(client) : buildBlankPrompt());
+  }, [client?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGenerate = async () => {
+    if (!client) {
+      toast.error("No client selected — AI generation requires a client");
+      return;
+    }
     setGenerating(true);
     try {
       const { data } = await api.post<{ template: string }>(
         `/clients/${client.id}/ai/draft-template`,
         { channel: "email", custom_instruction: finalPrompt }
       );
-
-      // Parse subject line if present
       const lines = data.template.split("\n");
       let subject: string | null = null;
       let body = data.template;
@@ -86,7 +113,6 @@ function PromptPanel({ client, onGenerated }: PromptPanelProps) {
         subject = lines[0].replace(/^subject:\s*/i, "").trim();
         body = lines.slice(lines[1] === "" ? 2 : 1).join("\n").trim();
       }
-
       onGenerated(subject, body);
       setOpen(false);
       toast.success("Message generated — review and edit before saving");
@@ -100,7 +126,6 @@ function PromptPanel({ client, onGenerated }: PromptPanelProps) {
 
   return (
     <div className="rounded-lg border border-primary/20 bg-primary/5">
-      {/* Toggle header */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -115,7 +140,11 @@ function PromptPanel({ client, onGenerated }: PromptPanelProps) {
 
       {open && (
         <div className="px-4 pb-4 space-y-4 border-t border-primary/20 pt-4">
-          {/* Final prompt — fully editable */}
+          {!client && (
+            <p className="text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-3 py-2">
+              AI generation uses a client's profile and API keys. This template has no client — edit the prompt below manually and click Generate, or link this to a client context.
+            </p>
+          )}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs font-medium text-muted-foreground">
@@ -123,7 +152,7 @@ function PromptPanel({ client, onGenerated }: PromptPanelProps) {
               </label>
               <button
                 type="button"
-                onClick={() => setFinalPrompt(buildDefaultPrompt(client))}
+                onClick={() => setFinalPrompt(defaultPrompt)}
                 className="text-[11px] text-muted-foreground hover:text-primary hover:underline"
               >
                 Reset to default
@@ -136,14 +165,14 @@ function PromptPanel({ client, onGenerated }: PromptPanelProps) {
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-y font-mono leading-relaxed"
             />
             <p className="text-[10px] text-muted-foreground mt-1">
-              This is the exact prompt sent to AI. Edit anything — client context, instructions, variables, format.
+              This is the exact prompt sent to AI. Edit anything — context, instructions, variables, format.
             </p>
           </div>
 
           <button
             type="button"
             onClick={handleGenerate}
-            disabled={generating}
+            disabled={generating || !client}
             className={cn(
               buttonVariants({ variant: "default", size: "sm" }),
               "w-full justify-center gap-2"
@@ -167,6 +196,12 @@ export function TemplateDialog({
   initial,
   onSave,
   isSaving = false,
+  mode = "library",
+  onUse,
+  onSaveAsClient,
+  onSaveAsGlobal,
+  isSavingClient = false,
+  isSavingGlobal = false,
 }: TemplateDialogProps) {
   const [name, setName] = useState(initial?.name ?? "");
   const [subject, setSubject] = useState(initial?.subject ?? "");
@@ -191,26 +226,30 @@ export function TemplateDialog({
     .replace("{email}", "info@johnsonskitchen.com")
     .replace("{website}", "www.johnsonskitchen.com");
 
-  const handleSave = () => {
-    if (!name.trim()) { toast.error("Template name is required"); return; }
-    if (!body.trim()) { toast.error("Message body is required"); return; }
-    onSave({ name: name.trim(), subject: subject.trim() || null, body: body.trim() });
+  const validate = (): { name: string; subject: string | null; body: string } | null => {
+    if (mode === "library" && !name.trim()) { toast.error("Template name is required"); return null; }
+    if (!body.trim()) { toast.error("Message body is required"); return null; }
+    return { name: name.trim(), subject: subject.trim() || null, body: body.trim() };
   };
+
+  const titleText = mode === "step"
+    ? "Create Message"
+    : initial ? "Edit Template" : "New Template";
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl w-full border-border bg-card p-0 gap-0 max-h-[90vh] flex flex-col">
         <DialogHeader className="px-6 py-4 border-b border-border shrink-0">
           <DialogTitle className="text-base font-semibold text-foreground">
-            {initial ? "Edit Template" : "New Template"}
+            {titleText}
           </DialogTitle>
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
-          {/* Name */}
+          {/* Name — only required in library mode */}
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-              Template Name *
+              Template Name {mode === "library" ? "*" : <span className="text-muted-foreground/60 font-normal">(optional — only needed if saving)</span>}
             </label>
             <input
               type="text"
@@ -265,16 +304,15 @@ export function TemplateDialog({
                 rows={7}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                placeholder="Write your message template here, or use Generate with AI below…"
+                placeholder="Write your message here, or use Generate with AI below…"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
               />
             )}
 
-            {/* Variable chips */}
             {!showPreview && (
               <div className="mt-2">
                 <p className="text-[10px] text-muted-foreground mb-1.5">
-                  Insert variable — these get replaced with each lead's real data when a campaign sends:
+                  Insert variable — replaced with each lead's real data when a campaign sends:
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {VARS.map((v) => (
@@ -292,36 +330,84 @@ export function TemplateDialog({
             )}
           </div>
 
-          {/* AI Prompt Panel */}
           {!showPreview && (
             <PromptPanel
               client={client}
-              onGenerated={(subject, body) => {
-                setBody(body);
-                if (subject) setSubject(subject);
+              onGenerated={(s, b) => {
+                setBody(b);
+                if (s) setSubject(s);
               }}
             />
           )}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-border flex justify-end gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving || !name.trim() || !body.trim()}
-            className={cn(buttonVariants({ variant: "default", size: "sm" }), "gap-2 min-w-[100px]")}
-          >
-            {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            {initial ? "Save Changes" : "Save Template"}
-          </button>
+        <div className="px-6 py-4 border-t border-border shrink-0">
+          {mode === "library" ? (
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={onClose} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => { const d = validate(); if (d) onSave?.(d); }}
+                disabled={isSaving || !body.trim() || (mode === "library" && !name.trim())}
+                className={cn(buttonVariants({ variant: "default", size: "sm" }), "gap-2 min-w-[110px]")}
+              >
+                {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {initial ? "Save Changes" : "Save Template"}
+              </button>
+            </div>
+          ) : (
+            /* Step mode — three actions */
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+              <button type="button" onClick={onClose} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-muted-foreground")}>
+                Cancel
+              </button>
+              <div className="flex flex-wrap gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => { const d = validate(); if (d) onUse?.(d); }}
+                  disabled={!body.trim()}
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+                >
+                  Use without Saving
+                </button>
+                {onSaveAsClient && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!name.trim()) { toast.error("Template name is required to save"); return; }
+                      const d = validate();
+                      if (d) onSaveAsClient(d);
+                    }}
+                    disabled={isSavingClient || !body.trim()}
+                    className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5 border-primary/40 text-primary hover:bg-primary/10")}
+                  >
+                    {isSavingClient && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    <BookmarkPlus className="h-3.5 w-3.5" />
+                    Save as Client Template
+                  </button>
+                )}
+                {onSaveAsGlobal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!name.trim()) { toast.error("Template name is required to save"); return; }
+                      const d = validate();
+                      if (d) onSaveAsGlobal(d);
+                    }}
+                    disabled={isSavingGlobal || !body.trim()}
+                    className={cn(buttonVariants({ variant: "default", size: "sm" }), "gap-1.5")}
+                  >
+                    {isSavingGlobal && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    <Globe className="h-3.5 w-3.5" />
+                    Save as Global Template
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

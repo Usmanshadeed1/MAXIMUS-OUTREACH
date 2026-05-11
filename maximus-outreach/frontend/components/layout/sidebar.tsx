@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Zap,
   X,
+  LayoutTemplate,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
@@ -29,6 +30,7 @@ const mainNavItems = [
   { label: "Review Queue", href: "/review-queue", icon: CheckSquare },
   { label: "Conversations", href: "/conversations", icon: MessageCircle },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  { label: "Templates", href: "/templates", icon: LayoutTemplate },
 ] as const;
 
 const adminNavItems = [

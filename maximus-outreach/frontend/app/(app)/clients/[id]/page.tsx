@@ -59,6 +59,7 @@ import {
   useCreateTemplate,
   useUpdateTemplate,
   useDeleteTemplate,
+  useMakeGlobalTemplate,
   type MessageTemplate,
 } from "@/lib/hooks/use-templates";
 import { TemplateDialog } from "@/components/templates/template-dialog";
@@ -175,6 +176,7 @@ export default function ClientDetailPage({
   const createTemplate = useCreateTemplate(id);
   const updateTemplate = useUpdateTemplate(id);
   const deleteTemplate = useDeleteTemplate(id);
+  const makeGlobal = useMakeGlobalTemplate();
 
   const handleExport = async () => {
     setExporting(true);
@@ -852,6 +854,22 @@ export default function ClientDetailPage({
                   </div>
                   {isOwner && (
                     <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await makeGlobal.mutateAsync(tpl);
+                            toast.success("Template added to Global Templates");
+                          } catch {
+                            toast.error("Failed to make global");
+                          }
+                        }}
+                        disabled={makeGlobal.isPending}
+                        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-8 w-8 text-primary hover:text-primary")}
+                        title="Make Global"
+                      >
+                        <Globe className="h-3.5 w-3.5" />
+                      </button>
                       <button
                         type="button"
                         onClick={() => { setTemplateToEdit(tpl); setTemplateDialogOpen(true); }}

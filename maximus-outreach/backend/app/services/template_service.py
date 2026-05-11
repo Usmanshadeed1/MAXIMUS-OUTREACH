@@ -1,4 +1,4 @@
-"""Service: Message Template CRUD."""
+"""Service: Message Template CRUD (client-scoped and global)."""
 import uuid
 
 from sqlalchemy import select
@@ -16,6 +16,15 @@ async def list_templates(client_id: uuid.UUID, db: AsyncSession) -> list[Message
     return list(result.scalars().all())
 
 
+async def list_global_templates(db: AsyncSession) -> list[MessageTemplate]:
+    result = await db.execute(
+        select(MessageTemplate)
+        .where(MessageTemplate.client_id.is_(None))
+        .order_by(MessageTemplate.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
 async def get_template(template_id: uuid.UUID, client_id: uuid.UUID, db: AsyncSession) -> MessageTemplate | None:
     result = await db.execute(
         select(MessageTemplate).where(
@@ -26,8 +35,18 @@ async def get_template(template_id: uuid.UUID, client_id: uuid.UUID, db: AsyncSe
     return result.scalar_one_or_none()
 
 
+async def get_global_template(template_id: uuid.UUID, db: AsyncSession) -> MessageTemplate | None:
+    result = await db.execute(
+        select(MessageTemplate).where(
+            MessageTemplate.id == template_id,
+            MessageTemplate.client_id.is_(None),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def create_template(
-    client_id: uuid.UUID,
+    client_id: uuid.UUID | None,
     name: str,
     body: str,
     subject: str | None,
